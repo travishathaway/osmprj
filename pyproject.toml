@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "osmprj"
+version = "0.1.0"
+description = "Sample project for working with OpenStreetMap data with PostgreSQL and Python"
+authors = ["Your Name <you@example.com>"]
+license = "GPLv3"
+include = ['osmprj/report/sql/*.sql']
+
+[tool.poetry.dependencies]
+python = "^3.9"
+click = "^8.0.4"
+psycopg2-binary = "^2.9.3"
+plotly = "^5.6.0"
+rich = "^12.0.1"
+requests = "^2.27.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.1.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+osmprj = 'osmprj.main:cli'

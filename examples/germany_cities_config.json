@@ -1,0 +1,125 @@
+{
+  "pg_dsn": "postgresql://postgres:postgres@localhost:5432/germany_osm",
+  "extracts": [
+    {
+      "name": "Berlin",
+      "bundesland": "Berlin",
+      "output": "berlin.osm.pbf",
+      "population": 3664088,
+      "bbox": [
+        13.094083496270972,
+        52.33482927655171,
+        13.766772766313322,
+        52.67206633881316
+      ]
+    },
+    {
+      "name": "Hamburg",
+      "bundesland": "Hamburg",
+      "output": "hamburg.osm.pbf",
+      "population": 1852478,
+      "bbox": [
+        8.427474937731327,
+        53.391761283459466,
+        10.331690370372208,
+        53.96132356351048
+      ]
+    },
+    {
+      "name": "München",
+      "bundesland": "Bayern",
+      "output": "münchen.osm.pbf",
+      "population": 1488202,
+      "bbox": [
+        11.36632414978816,
+        48.058753449509965,
+        11.728392471490865,
+        48.24522638268751
+      ]
+    },
+    {
+      "name": "Köln",
+      "bundesland": "Nordrhein-Westfalen",
+      "output": "köln.osm.pbf",
+      "population": 1083498,
+      "bbox": [
+        6.7792340982232995,
+        50.82752142259416,
+        7.168636776194676,
+        51.08204278618401
+      ]
+    },
+    {
+      "name": "Frankfurt am Main",
+      "bundesland": "Hessen",
+      "output": "frankfurt_am_main.osm.pbf",
+      "population": 764104,
+      "bbox": [
+        8.479069925273013,
+        50.01262276172167,
+        8.806700589117133,
+        50.22419160652531
+      ]
+    },
+    {
+      "name": "Stuttgart",
+      "bundesland": "Stuttgart",
+      "output": "stuttgart.osm.pbf",
+      "population": 630305,
+      "bbox": [
+        9.044610698930166,
+        48.68919790522467,
+        9.321990010086834,
+        48.86356072347189
+      ]
+    },
+    {
+      "name": "Düsseldorf",
+      "bundesland": "Nordrhein-Westfalen",
+      "output": "düsseldorf.osm.pbf",
+      "population": 620523,
+      "bbox": [
+        6.695557433690569,
+        51.12143639634187,
+        6.94659003163877,
+        51.349534992045186
+      ]
+    },
+    {
+      "name": "Leipzig",
+      "bundesland": "Sachsen",
+      "output": "leipzig.osm.pbf",
+      "population": 597493,
+      "bbox": [
+        12.242410288897606,
+        51.23493594192193,
+        12.548142994044012,
+        51.44484913146013
+      ]
+    },
+    {
+      "name": "Dortmund",
+      "bundesland": "Nordrhein-Westfalen",
+      "output": "dortmund.osm.pbf",
+      "population": 587696,
+      "bbox": [
+        7.309062882636431,
+        51.412524512908035,
+        7.644776455578273,
+        51.5970263718098
+      ]
+    },
+    {
+      "name": "Essen",
+      "bundesland": "Nordrhein-Westfalen",
+      "output": "essen.osm.pbf",
+      "population": 582415,
+      "bbox": [
+        6.901087238510484,
+        51.34460744422419,
+        7.144342403403524,
+        51.531217077261886
+      ]
+    }
+  ]
+}
