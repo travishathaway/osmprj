@@ -7,7 +7,7 @@ It was originally written for a PyConDE talk I gave in 2022:
 
 Full video of the presentation:
 
-*Coming soon!*
+[Watch the presentation on YouTube](https://www.youtube.com/watch?v=z9_prnssu0w)
 
 Slides used in the presentation
 
