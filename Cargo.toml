@@ -1,0 +1,25 @@
+[package]
+name = "osmprj"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "osmprj"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }
+tokio-postgres = "0.7"
+toml = "0.8"
+toml_edit = "0.22"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", features = ["blocking", "json", "rustls-tls"], default-features = false }
+dirs = "5"
+indicatif = "0.18.4"
+console = "0.16.3"
+dialoguer = "0.12.0"
+thiserror = "2.0.18"
+anyhow = "1.0.102"
+miette = { version = "7.6.0", features = ["fancy"] }

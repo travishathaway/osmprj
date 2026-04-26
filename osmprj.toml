@@ -1,0 +1,7 @@
+[project]
+
+[sources]
+germany = { schema = "germany" }
+# database_url = "postgres://user:pass@localhost/osm"
+
+# Add sources with: osmprj add <geofabrik-id> --theme <theme>
