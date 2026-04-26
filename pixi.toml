@@ -44,6 +44,9 @@ pylint = ">=4.0.4,<5"
 commitizen = ">=4.13.5,<5"
 pg-helper = "*"
 
+[feature.dev.activation]
+env = { PATH = "$PIXI_PROJECT_ROOT/target/debug:$PATH" }
+
 [feature.dev.tasks]
 test = "pytest tests"
 test-unit = "pytest tests/unit"

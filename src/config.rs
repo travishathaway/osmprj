@@ -3,6 +3,7 @@ use miette::NamedSource;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
+use std::path::PathBuf;
 
 #[derive(Debug, Default, Deserialize)]
 pub struct TopicsConfig {
@@ -30,6 +31,33 @@ impl SourceConfig {
 #[derive(Debug, Default, Deserialize)]
 pub struct ProjectSettings {
     pub database_url: Option<String>,
+    pub data_dir: Option<String>,
+    pub log_dir: Option<String>,
+    pub ssd: Option<bool>,
+}
+
+impl ProjectSettings {
+    pub fn effective_data_dir(&self) -> PathBuf {
+        if let Some(ref d) = self.data_dir {
+            return PathBuf::from(d);
+        }
+        dirs::cache_dir()
+            .unwrap_or_else(|| PathBuf::from(".cache"))
+            .join("osmprj")
+            .join("geofabrik")
+    }
+
+    pub fn effective_log_dir(&self) -> PathBuf {
+        if let Some(ref d) = self.log_dir {
+            PathBuf::from(d)
+        } else {
+            PathBuf::from("logs")
+        }
+    }
+
+    pub fn effective_ssd(&self) -> bool {
+        self.ssd.unwrap_or(true)
+    }
 }
 
 #[derive(Debug, Default, Deserialize)]

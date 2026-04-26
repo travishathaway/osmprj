@@ -3,12 +3,20 @@ mod config;
 mod db;
 mod error;
 mod geofabrik;
+mod lock;
+mod themepark;
+mod tuner;
 
 use clap::{Parser, Subcommand};
+use config::ProjectConfig;
 
 #[derive(Parser)]
 #[command(name = "osmprj", about = "OpenStreetMap and PostgreSQL project management tool", version)]
 struct Cli {
+    /// Enable verbose output (stream osm2pgsql logs to terminal)
+    #[arg(short = 'v', long, global = true)]
+    verbose: bool,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -38,8 +46,13 @@ enum Commands {
         #[arg(long)]
         schema: Option<String>,
     },
+    /// Show project and database status
+    Status,
     /// Sync OSM data sources listed in osmprj.toml to the configured database
-    Sync,
+    Sync {
+        /// Specific sources to sync (defaults to all)
+        sources: Vec<String>,
+    },
     /// Remove a data source from osmprj.toml
     Remove,
     /// Remove all OSM data from the configured database
@@ -54,15 +67,20 @@ async fn main() -> miette::Result<()> {
     .ok();
 
     let cli = Cli::parse();
+    let verbose = cli.verbose;
 
     match cli.command {
         Commands::Init { db } => commands::init::run(db),
         Commands::Add { geofabrik_id, path, name, theme, schema } => {
-            commands::add::run(geofabrik_id, path, name, theme, schema)
+            commands::add::run(geofabrik_id, path, name, theme, schema).await
         }
-        Commands::Sync => {
-            println!("sync: not yet implemented");
-            Ok(())
+        Commands::Status => {
+            let config = ProjectConfig::load()?.ok_or(error::OsmprjError::ProjectNotFound)?;
+            commands::status::run(&config).await
+        }
+        Commands::Sync { sources } => {
+            let config = ProjectConfig::load()?.ok_or(error::OsmprjError::ProjectNotFound)?;
+            commands::sync::run(sources, verbose, &config).await
         }
         Commands::Remove => {
             println!("remove: not yet implemented");
