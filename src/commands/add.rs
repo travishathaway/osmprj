@@ -30,11 +30,11 @@ pub fn run(
         _ => return Err(OsmprjError::InvalidArgs),
     };
 
-    let effective_schema = SourceConfig {
-        schema: schema.clone(),
+    let source_config = SourceConfig {
+        schema,
         ..Default::default()
-    }
-    .effective_schema(&source_name);
+    };
+    let effective_schema = source_config.effective_schema(&source_name);
 
     let raw = fs::read_to_string("osmprj.toml")?;
     let mut doc: DocumentMut = raw.parse().map_err(|e: toml_edit::TomlError| {
