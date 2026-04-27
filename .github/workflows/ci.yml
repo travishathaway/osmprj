@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  pull_request:
+
+jobs:
+  test:
+    name: Tests / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: prefix-dev/setup-pixi@v0.8.5
+        with:
+          environments: dev rust
+          cache: true
+
+      - name: Build Rust binary
+        run: pixi run --environment rust build-rust
+
+      - name: Fast tests
+        run: pixi run --environment dev pytest -m "not slow"
+
+      - name: Slow end-to-end tests
+        run: pixi run --environment dev pytest tests/integration/test_sync_e2e.py -m slow -v

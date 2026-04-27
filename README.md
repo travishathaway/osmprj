@@ -1,0 +1,309 @@
+# osmprj
+
+A command-line tool for managing OpenStreetMap data imports into PostgreSQL. It wraps `osm2pgsql` to automate downloading PBF files from Geofabrik, tuning import parameters for your hardware, running incremental updates, and tracking source state across runs.
+
+> [!WARNING]
+> **osmprj is experimental software under active development.** Commands, configuration formats, and behaviour may change without notice between versions. It is not yet recommended for production use. Feedback and bug reports are very welcome — see the [Contributing](#contributing) section below.
+
+---
+
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Command Reference](#command-reference)
+  - [init](#init)
+  - [add](#add)
+  - [status](#status)
+  - [sync](#sync)
+- [Configuration Reference](#configuration-reference)
+- [Contributing](#contributing)
+- [Sponsor This Project](#sponsor-this-project)
+
+---
+
+## Prerequisites
+
+osmprj coordinates several external tools. Make sure these are installed and on your `PATH` before use:
+
+| Dependency | Notes |
+|---|---|
+| **PostgreSQL** with **PostGIS** | The target database for OSM data |
+| **osm2pgsql ≥ 2** | The underlying import engine |
+| **osm2pgsql-replication** | Bundled with osm2pgsql since v1.9; handles incremental updates |
+| **osm2pgsql-themepark** _(optional)_ | Required when using `--theme`. Set `THEMEPARK_PATH` to its root directory |
+
+---
+
+## Installation
+
+Build from source with Cargo:
+
+```bash
+git clone https://github.com/travishathaway/osmprj
+cd osmprj
+cargo build --release
+# Binary is at target/release/osmprj
+```
+
+Or, if you use [pixi](https://pixi.sh):
+
+```bash
+pixi run build-rust
+```
+
+---
+
+## Quick Start
+
+The typical workflow is: initialise a project, add one or more data sources, then sync.
+
+```bash
+# 1. Create a project file in the current directory
+osmprj init --db "postgres://user:pass@localhost/osm"
+
+# 2. Add a Geofabrik region (uses shortbread_v1 theme)
+osmprj add germany --theme shortbread_v1
+
+# 3. Check what will be synced
+osmprj status
+
+# 4. Download and import the data
+osmprj sync
+```
+
+On the first run, `sync` downloads the PBF from Geofabrik, auto-tunes the `osm2pgsql` parameters for your system, and initialises replication. On subsequent runs it applies only the changes since the last update.
+
+---
+
+## Command Reference
+
+### init
+
+```
+osmprj init [--db <DATABASE_URL>]
+```
+
+Creates an `osmprj.toml` project file in the current directory. Fails if one already exists.
+
+- `--db` — Writes the database connection URL into `[project].database_url`. If omitted, a commented-out placeholder is added instead.
+
+**Example**
+
+```bash
+osmprj init --db "postgres://postgres@localhost/osm"
+```
+
+The resulting `osmprj.toml`:
+
+```toml
+[project]
+database_url = "postgres://postgres@localhost/osm"
+
+# Add sources with: osmprj add <geofabrik-id> --theme <theme>
+```
+
+---
+
+### add
+
+```
+osmprj add <GEOFABRIK_ID>... [--theme <THEME>] [--schema <SCHEMA>]
+osmprj add --path <FILE> --name <NAME> [--theme <THEME>] [--schema <SCHEMA>]
+```
+
+Registers one or more data sources in `osmprj.toml`. If a database URL is configured, `add` also creates the PostgreSQL schema immediately.
+
+**Adding Geofabrik regions**
+
+Pass one or more region IDs (the path component from [download.geofabrik.de](https://download.geofabrik.de)). The index is fetched and cached automatically.
+
+```bash
+# Single region
+osmprj add germany --theme shortbread_v1
+
+# Multiple regions at once (schema names are auto-derived)
+osmprj add europe/france europe/spain --theme shortbread_v1
+
+# Override the schema name (only valid for a single ID)
+osmprj add europe/france --theme shortbread_v1 --schema france
+```
+
+**Adding a local PBF file**
+
+Use `--path` and `--name` together. The file is used directly without any download.
+
+```bash
+osmprj add --path /data/my-region.osm.pbf --name my-region --theme shortbread_v1
+```
+
+**Available themes** (requires `osm2pgsql-themepark`):
+
+| Theme | Description |
+|---|---|
+| `shortbread_v1` | [Shortbread](https://shortbread-tiles.org) vector tile schema |
+| `shortbread_v1_gen` | Shortbread with generalised geometry layers |
+| `basic` / `generic` | Generic flexible schema |
+| `osmcarto` | OpenStreetMap Carto style schema |
+| `experimental` | Experimental themepark config |
+
+Schema names are auto-derived from the source name by replacing `/` and `-` with `_` (e.g. `europe/france` → `europe_france`). Use `--schema` to override.
+
+---
+
+### status
+
+```
+osmprj status
+```
+
+Shows the configured database connection and the state of each registered source. Requires `osmprj.toml` in the current directory.
+
+**Example output**
+
+```
+  database:  postgres://postgres@localhost/osm  ✓ connected
+
+  source   schema   status
+  ------   ------   ------
+  germany  germany  ✓
+  france   france   ✗  — run 'osmprj sync' to import
+```
+
+If no database URL is configured, sources are still listed but without connection status.
+
+---
+
+### sync
+
+```
+osmprj sync [SOURCE...] [-v]
+```
+
+Downloads and imports all registered sources, or only the named subset. On first run it performs a full import; on subsequent runs it applies incremental updates via `osm2pgsql-replication`.
+
+- **Source selection** — Pass one or more source names to sync only those. Defaults to all sources.
+- `-v` / `--verbose` — Stream `osm2pgsql` log output to the terminal in addition to writing it to the log file.
+
+**How it works**
+
+1. **Classify** — Checks the database to determine which sources have already been imported and have replication initialised (update mode) vs. those that need a fresh import.
+2. **Download** — For each Geofabrik source that needs a fresh import and has not been downloaded yet, streams the PBF file to the OS cache directory with a progress bar. MD5 checksums are verified against Geofabrik's sidecar files. Already-downloaded files are skipped.
+3. **Tune** — Automatically selects `osm2pgsql` flags based on your system RAM, PBF file size, and whether the storage is SSD:
+   - Uses `--flat-nodes` for large files (≥ 8 GB on SSD, ≥ 30 GB on HDD).
+   - Sets `--cache` to up to 66% of system RAM for smaller files.
+4. **Import** — Runs `osm2pgsql --create --slim --output=flex` for each fresh source.
+5. **Replication init** — Runs `osm2pgsql-replication init` immediately after each fresh import.
+6. **Update** — For sources already in update mode, runs `osm2pgsql-replication update` to apply changes since the last sync.
+
+Logs for each source are written to `./logs/<source-name>.log` (configurable via `log_dir`).
+
+**Examples**
+
+```bash
+# Sync everything
+osmprj sync
+
+# Sync a specific source
+osmprj sync germany
+
+# Sync with verbose osm2pgsql output
+osmprj sync -v
+```
+
+---
+
+## Configuration Reference
+
+`osmprj.toml` lives in your project directory. All fields under `[project]` are optional.
+
+```toml
+[project]
+# PostgreSQL connection URL (required for sync and status)
+database_url = "postgres://user:pass@localhost/osm"
+
+# Directory for downloaded PBF files.
+# Default: <OS cache dir>/osmprj/geofabrik/
+data_dir = "/mnt/data/osm"
+
+# Directory for osm2pgsql log files. Default: ./logs
+log_dir = "/var/log/osmprj"
+
+# Set to false if data_dir is on spinning disk.
+# Raises the flat-nodes threshold from 8 GB to 30 GB. Default: true
+ssd = true
+
+# Maximum diff size in MB for replication updates. Optional.
+max_diff_size_mb = 500
+
+# Sources are added by `osmprj add` but can also be edited by hand.
+[sources.germany]
+theme = "shortbread_v1"
+schema = "germany"
+
+[sources."europe/france"]
+theme = "shortbread_v1_gen"
+schema = "france"
+
+[sources.local-extract]
+path = "/data/custom.osm.pbf"
+theme = "basic"
+schema = "custom"
+```
+
+---
+
+## Contributing
+
+Contributions are welcome. osmprj is in early development so there is plenty of room to help.
+
+### Reporting Bugs
+
+Please [open an issue](https://github.com/travishathaway/osmprj/issues/new) and include:
+
+- Your operating system and architecture
+- The output of `osmprj --version`
+- The `osmprj.toml` you were using (redact credentials)
+- The full error message or unexpected output
+- The relevant section of the log file if the failure was in `sync`
+
+### Submitting Pull Requests
+
+1. Fork the repository and create a branch from `main`.
+2. Make your changes. Run `cargo fmt` and `cargo clippy` before committing.
+3. Add or update tests where appropriate (`cargo test`).
+4. Open a pull request with a clear description of what the change does and why.
+
+For non-trivial changes, opening an issue first to discuss the approach is encouraged.
+
+### Development Setup
+
+```bash
+git clone https://github.com/travishathaway/osmprj
+cd osmprj
+
+# Build
+cargo build
+
+# Run tests
+cargo test
+
+# Lint
+cargo clippy
+
+# Format
+cargo fmt
+```
+
+Integration tests require a running PostgreSQL instance with PostGIS. See `tests/integration/conftest.py` for setup details.
+
+---
+
+## Sponsor This Project
+
+osmprj is developed and maintained as free, open-source software. If you find it useful and would like to support continued development, please consider sponsoring via GitHub Sponsors:
+
+**[github.com/sponsors/travishathaway](https://github.com/sponsors/travishathaway)**
+
+Sponsorships help fund time for new features, bug fixes, documentation, and keeping the project maintained. Every contribution, large or small, is appreciated.

@@ -52,6 +52,13 @@ pub enum OsmprjError {
     #[diagnostic(code(osmprj::invalid_args))]
     InvalidArgs,
 
+    #[error("--schema cannot be used with multiple Geofabrik IDs")]
+    #[diagnostic(
+        code(osmprj::schema_with_multiple_ids),
+        help("Omit --schema to use the auto-derived schema name for each region")
+    )]
+    SchemaWithMultipleIds,
+
     #[error("No database URL configured")]
     #[diagnostic(
         code(osmprj::no_database_url),
@@ -109,13 +116,12 @@ pub enum OsmprjError {
     )]
     BinaryNotFound { binary: String },
 
-    #[error("Failed to download osm2pgsql-themepark: {message}")]
-    #[diagnostic(code(osmprj::themepark_download_failed))]
-    ThemeparkDownloadFailed { message: String },
-
-    #[error("Failed to extract osm2pgsql-themepark: {message}")]
-    #[diagnostic(code(osmprj::themepark_extract_failed))]
-    ThemeparkExtractFailed { message: String },
+    #[error("osm2pgsql-themepark is not installed (THEMEPARK_PATH is not set or does not exist)")]
+    #[diagnostic(
+        code(osmprj::themepark_not_found),
+        help("Install osm2pgsql-themepark and ensure THEMEPARK_PATH points to its root directory")
+    )]
+    ThemeparkNotFound,
 
     #[error("Theme '{theme}' not found in osm2pgsql-themepark config directory")]
     #[diagnostic(
@@ -139,6 +145,10 @@ pub enum OsmprjError {
     #[error("osm2pgsql-replication init failed for '{name}': exit code {code}")]
     #[diagnostic(code(osmprj::replication_init_failed))]
     ReplicationInitFailed { name: String, code: i32 },
+
+    #[error("osm2pgsql-replication update failed for '{name}': exit code {code}")]
+    #[diagnostic(code(osmprj::replication_update_failed))]
+    ReplicationUpdateFailed { name: String, code: i32 },
 
     #[error(transparent)]
     #[diagnostic(code(osmprj::io))]

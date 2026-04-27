@@ -34,6 +34,7 @@ pub struct ProjectSettings {
     pub data_dir: Option<String>,
     pub log_dir: Option<String>,
     pub ssd: Option<bool>,
+    pub max_diff_size_mb: Option<u32>,
 }
 
 impl ProjectSettings {
