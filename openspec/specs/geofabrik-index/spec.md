@@ -24,8 +24,6 @@ The system SHALL provide a `lookup(id: &str, index: &GeofabrikIndex) -> Option<&
 - **WHEN** `lookup("nonexistent-place", &index)` is called
 - **THEN** the function returns `None`
 
-<<<<<<< Updated upstream
-=======
 ### Requirement: All HTTP requests MUST be async
 The system SHALL use only the async `reqwest` API for all network operations. The `blocking` feature of the `reqwest` crate SHALL NOT be enabled in `Cargo.toml`. Mixing the blocking transport with a Tokio runtime causes a runtime-within-runtime panic on macOS.
 
@@ -37,7 +35,6 @@ The system SHALL use only the async `reqwest` API for all network operations. Th
 - **WHEN** any HTTP request is made in the geofabrik module
 - **THEN** it uses `reqwest::Client` or `reqwest::get` with `.await`, never `reqwest::blocking`
 
->>>>>>> Stashed changes
 ### Requirement: Network failure produces a clear error
 The system SHALL return a descriptive error when the index cannot be fetched, rather than panicking.
 
