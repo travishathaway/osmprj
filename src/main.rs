@@ -31,8 +31,8 @@ enum Commands {
     },
     /// Add a new OSM data source to osmprj.toml
     Add {
-        /// Geofabrik region ID (e.g. germany, europe/france)
-        geofabrik_id: Option<String>,
+        /// Geofabrik region IDs (e.g. germany, europe/france); accepts multiple
+        geofabrik_ids: Vec<String>,
         /// Path to a local .osm.pbf file
         #[arg(long)]
         path: Option<String>,
@@ -42,7 +42,7 @@ enum Commands {
         /// Themepark theme (e.g. shortbread_v1, basic)
         #[arg(long)]
         theme: Option<String>,
-        /// PostgreSQL schema name (defaults to normalized source name)
+        /// PostgreSQL schema name (defaults to normalized source name; cannot be used with multiple IDs)
         #[arg(long)]
         schema: Option<String>,
     },
@@ -71,8 +71,8 @@ async fn main() -> miette::Result<()> {
 
     match cli.command {
         Commands::Init { db } => commands::init::run(db),
-        Commands::Add { geofabrik_id, path, name, theme, schema } => {
-            commands::add::run(geofabrik_id, path, name, theme, schema).await
+        Commands::Add { geofabrik_ids, path, name, theme, schema } => {
+            commands::add::run(geofabrik_ids, path, name, theme, schema).await
         }
         Commands::Status => {
             let config = ProjectConfig::load()?.ok_or(error::OsmprjError::ProjectNotFound)?;

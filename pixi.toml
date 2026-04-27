@@ -2,8 +2,8 @@
 name = "osmprj"
 version = "0.1.0"
 description = "OpenStreetMap and PostgreSQL project management tool"
-channels = ["https://prefix.dev/gis-forge", "https://prefix.dev/thath", "conda-forge"]
-platforms = ["linux-64"] # ["osx-arm64", "osx-64", "linux-64", "win-64"]
+channels = ["gis-forge", "https://prefix.dev/thath", "conda-forge"]
+platforms = ["linux-64", "osx-arm64"] #  "osx-64", "linux-64", "win-64"]
 
 [environments]
 default = { solve-group = "default" }
@@ -22,6 +22,7 @@ postgresql = ">=18"
 postgis = "*"
 osmium-tool = "*"
 osm2pgsql = ">=2"
+osm2pgsql-themepark = "*"
 platformdirs = ">=4.9.2,<5"
 
 [feature.rust.dependencies]

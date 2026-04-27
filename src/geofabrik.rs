@@ -32,7 +32,7 @@ fn cache_path() -> Result<PathBuf, OsmprjError> {
         .ok_or(OsmprjError::NoCacheDir)
 }
 
-pub fn load_index() -> Result<Vec<GeofabrikFeature>, OsmprjError> {
+pub async fn load_index() -> Result<Vec<GeofabrikFeature>, OsmprjError> {
     let path = cache_path()?;
 
     if path.exists() {
@@ -43,7 +43,7 @@ pub fn load_index() -> Result<Vec<GeofabrikFeature>, OsmprjError> {
     }
 
     eprintln!("Fetching Geofabrik index...");
-    let response = reqwest::blocking::get(INDEX_URL)
+    let response = reqwest::get(INDEX_URL).await
         .map_err(|e| OsmprjError::GeofabrikFetchFailed { message: e.to_string() })?;
 
     if !response.status().is_success() {
@@ -54,10 +54,14 @@ pub fn load_index() -> Result<Vec<GeofabrikFeature>, OsmprjError> {
 
     let body = response
         .text()
+        .await
         .map_err(|e| OsmprjError::GeofabrikFetchFailed { message: e.to_string() })?;
 
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
+        if !parent.is_dir() {
+            let _ = fs::remove_file(parent);
+            fs::create_dir_all(parent)?;
+        }
     }
     fs::write(&path, &body)?;
 

@@ -2,8 +2,9 @@ use crate::config::{ProjectConfig, SourceConfig};
 use tempfile::NamedTempFile;
 use crate::error::OsmprjError;
 use crate::lock::{LockFile, SourceLockEntry};
-use crate::{themepark, tuner};
+use crate::{db, themepark, tuner};
 use chrono::Utc;
+use console::style;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use md5::{Digest, Md5};
 use std::io::Write as _;
@@ -160,6 +161,14 @@ async fn run_subprocess(
         std::fs::File::create(log_path).map_err(OsmprjError::Io)?;
     let log = Arc::new(Mutex::new(log_file));
 
+    let cmd_line = argv.join(" ");
+    if verbose {
+        println!("  [command] {cmd_line}");
+    }
+    if let Ok(mut f) = log.lock() {
+        let _ = writeln!(f, "[command] {cmd_line}");
+    }
+
     let mut child = tokio::process::Command::new(&argv[0])
         .args(&argv[1..])
         .stdout(Stdio::piped())
@@ -203,8 +212,17 @@ async fn replication_init(
     let log_file = std::fs::File::create(log_path).map_err(OsmprjError::Io)?;
     let log = Arc::new(Mutex::new(log_file));
 
+    let repl_args = ["init", "-d", database_url, "--schema", schema];
+    let cmd_line = format!("osm2pgsql-replication {}", repl_args.join(" "));
+    if verbose {
+        println!("  [command] {cmd_line}");
+    }
+    if let Ok(mut f) = log.lock() {
+        let _ = writeln!(f, "[command] {cmd_line}");
+    }
+
     let mut child = tokio::process::Command::new("osm2pgsql-replication")
-        .args(["init", "-d", database_url, "--schema", schema])
+        .args(repl_args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -231,6 +249,72 @@ async fn replication_init(
     Ok(())
 }
 
+// ─── replication update ───────────────────────────────────────────────────────
+
+async fn replication_update(
+    database_url: &str,
+    schema: &str,
+    style_path: &Path,
+    max_diff_size_mb: Option<u32>,
+    log_path: &Path,
+    verbose: bool,
+) -> Result<(), OsmprjError> {
+    let log_file = std::fs::File::create(log_path).map_err(OsmprjError::Io)?;
+    let log = Arc::new(Mutex::new(log_file));
+
+    let mut args: Vec<String> = vec![
+        "osm2pgsql-replication".into(),
+        "update".into(),
+        "-d".into(),
+        database_url.into(),
+        "--schema".into(),
+        schema.into(),
+    ];
+    if let Some(mb) = max_diff_size_mb {
+        args.push("--max-diff-size".into());
+        args.push(mb.to_string());
+    }
+    args.push("--".into());
+    args.push("--slim".into());
+    args.push("--output=flex".into());
+    args.push(format!("--style={}", style_path.display()));
+
+    let cmd_line = args.join(" ");
+    if verbose {
+        println!("  [command] {cmd_line}");
+    }
+    if let Ok(mut f) = log.lock() {
+        let _ = writeln!(f, "[command] {cmd_line}");
+    }
+
+    let mut child = tokio::process::Command::new(&args[0])
+        .args(&args[1..])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(OsmprjError::Io)?;
+
+    let stdout = child.stdout.take().unwrap();
+    let stderr = child.stderr.take().unwrap();
+
+    let log_out = Arc::clone(&log);
+    let log_err = Arc::clone(&log);
+    let stdout_task = tokio::spawn(pipe_to_log(stdout, log_out, verbose));
+    let stderr_task = tokio::spawn(pipe_to_log(stderr, log_err, verbose));
+
+    let status = child.wait().await.map_err(OsmprjError::Io)?;
+    let _ = tokio::join!(stdout_task, stderr_task);
+
+    if !status.success() {
+        return Err(OsmprjError::ReplicationUpdateFailed {
+            name: schema.to_string(),
+            code: status.code().unwrap_or(-1),
+        });
+    }
+
+    Ok(())
+}
+
 // ─── public entry point ───────────────────────────────────────────────────────
 
 pub async fn run(
@@ -238,7 +322,7 @@ pub async fn run(
     verbose: bool,
     config: &ProjectConfig,
 ) -> Result<(), OsmprjError> {
-    // 5.2 Validate source filter
+    // Validate source filter
     if !requested_sources.is_empty() {
         let unknown: Vec<_> = requested_sources
             .iter()
@@ -250,7 +334,6 @@ pub async fn run(
         }
     }
 
-    // 5.3 Check required binaries
     for bin in ["osm2pgsql", "osm2pgsql-replication"] {
         if !which(bin) {
             return Err(OsmprjError::BinaryNotFound { binary: bin.to_string() });
@@ -260,21 +343,48 @@ pub async fn run(
     let sources_to_sync: Vec<(&String, &SourceConfig)> = config
         .sources
         .iter()
-        .filter(|(name, _)| {
-            requested_sources.is_empty() || requested_sources.contains(name)
-        })
+        .filter(|(name, _)| requested_sources.is_empty() || requested_sources.contains(name))
         .collect();
 
-    // 5.4 Resolve data_dir
     let data_dir = config.project.effective_data_dir();
     std::fs::create_dir_all(&data_dir).map_err(OsmprjError::Io)?;
 
-    let cache_dir =
-        dirs::cache_dir().unwrap_or_else(|| PathBuf::from(".cache"));
+    let db_url = config.project.database_url.as_deref().unwrap_or("");
+    let max_diff_size_mb = config.project.max_diff_size_mb;
+
+    // ── Classify sources: update vs fresh ────────────────────────────────────
+    // A source is in "update" mode if osm2pgsql_properties reports updatable=true,
+    // meaning it was previously imported and replication was initialised.
+    let mut update_sources: Vec<&String> = Vec::new();
+    let mut fresh_sources: Vec<&String> = Vec::new();
+
+    if !db_url.is_empty() {
+        match db::connect(db_url).await {
+            Ok(client) => {
+                for (name, source) in &sources_to_sync {
+                    let schema = source.effective_schema(name);
+                    match db::source_is_updatable(&client, &schema).await {
+                        Ok(true) => update_sources.push(name),
+                        _ => fresh_sources.push(name),
+                    }
+                }
+            }
+            Err(_) => {
+                // Can't reach DB yet — treat all as fresh (import will fail naturally if DB is down)
+                for (name, _) in &sources_to_sync {
+                    fresh_sources.push(name);
+                }
+            }
+        }
+    } else {
+        for (name, _) in &sources_to_sync {
+            fresh_sources.push(name);
+        }
+    }
 
     let mut lock = LockFile::load()?;
 
-    // ── Phase 1: Downloads ────────────────────────────────────────────────────
+    // ── Phase 1: Downloads (fresh sources only) ───────────────────────────────
     let mp = MultiProgress::new();
     let bar_style = ProgressStyle::with_template(
         "  {spinner:.cyan} {msg:<35} [{bar:40.green/white}] {bytes}/{total_bytes} ({bytes_per_sec}, eta {eta})",
@@ -282,7 +392,7 @@ pub async fn run(
     .unwrap()
     .progress_chars("█▓░");
 
-    let client = Arc::new(
+    let http = Arc::new(
         reqwest::Client::builder()
             .build()
             .map_err(|e| OsmprjError::DownloadFailed {
@@ -294,19 +404,21 @@ pub async fn run(
     let mut set = tokio::task::JoinSet::new();
 
     for (name, source) in &sources_to_sync {
-        // Skip local path sources and already-locked sources
+        if !fresh_sources.contains(name) {
+            continue;
+        }
         if source.path.is_some() {
             continue;
         }
         if lock.sources.contains_key(name.as_str()) {
-            println!("  ⊙ {} already downloaded, skipping", name);
+            println!("  {} {} already downloaded, skipping", style("⊙").dim(), name);
             continue;
         }
 
-        let url = match source_pbf_url(name, config) {
+        let url = match source_pbf_url(name, config).await {
             Some(u) => u,
             None => {
-                eprintln!("  ! No download URL for source '{name}', skipping");
+                eprintln!("  {} No download URL for source '{name}', skipping", style("!").yellow());
                 continue;
             }
         };
@@ -316,13 +428,12 @@ pub async fn run(
         bar.set_style(bar_style.clone());
         bar.set_message(format!("{name}.osm.pbf"));
 
-        let client = Arc::clone(&client);
+        let http = Arc::clone(&http);
         let name = (*name).clone();
-        set.spawn(download_source(client, name, url, dest, bar));
+        set.spawn(download_source(http, name, url, dest, bar));
     }
 
-    // Drain the JoinSet; write lock incrementally after each success
-    let mut errors: Vec<(String, OsmprjError)> = Vec::new();
+    let mut dl_errors: Vec<(String, OsmprjError)> = Vec::new();
     let mut pbf_paths: std::collections::HashMap<String, PathBuf> = std::collections::HashMap::new();
 
     while let Some(result) = set.join_next().await {
@@ -331,35 +442,25 @@ pub async fn run(
                 pbf_paths.insert(dl.source_name.clone(), dl.pbf_path);
                 lock.set_source(dl.source_name, dl.entry)?;
             }
-            Err((name, e)) => errors.push((name, e)),
+            Err((name, e)) => dl_errors.push((name, e)),
         }
     }
 
     mp.clear().ok();
 
-    if !errors.is_empty() {
-        for (name, e) in &errors {
-            eprintln!("  ✗ {name}: {e}");
+    if !dl_errors.is_empty() {
+        for (name, e) in &dl_errors {
+            eprintln!("  {} {name}: {e}", style("✗").red());
         }
         return Err(OsmprjError::DownloadFailed {
             url: String::new(),
-            message: format!("{} download(s) failed", errors.len()),
+            message: format!("{} download(s) failed", dl_errors.len()),
         });
     }
 
-    // 6.1 Transition message
-    let n_ready = sources_to_sync
-        .iter()
-        .filter(|(_, s)| s.path.is_none())
-        .count();
-    println!("\n  🗺  {} file(s) ready — starting imports\n", n_ready.max(pbf_paths.len()));
-
-    // ── Phase 2: Imports ──────────────────────────────────────────────────────
-
-    // 6.2 Ensure themepark cached (only if any source has a theme)
-    let needs_themepark = sources_to_sync.iter().any(|(_, s)| s.theme.is_some());
-    let themepark_root = if needs_themepark {
-        Some(themepark::ensure_cached(&cache_dir, &mut lock).await?)
+    // ── Phase 2: Resolve shared resources ────────────────────────────────────
+    let themepark_root = if sources_to_sync.iter().any(|(_, s)| s.theme.is_some()) {
+        Some(themepark::find_root()?)
     } else {
         None
     };
@@ -367,7 +468,6 @@ pub async fn run(
     let log_dir = config.project.effective_log_dir();
     std::fs::create_dir_all(&log_dir).map_err(OsmprjError::Io)?;
 
-    let db_url = config.project.database_url.as_deref().unwrap_or("");
     let ram_gb = tuner::system_ram_gb();
     let ssd = config.project.effective_ssd();
 
@@ -375,21 +475,70 @@ pub async fn run(
         .unwrap()
         .tick_strings(&["🌍 ", "🌎 ", "🌏 ", "🌐 ", "🌍 "]);
 
+    // ── Phase 3a: Update sources ──────────────────────────────────────────────
+    if !update_sources.is_empty() {
+        println!("\n  🔄  Updating {} source(s)\n", update_sources.len());
+    }
+
+    for name in &update_sources {
+        let source = &config.sources[*name];
+        let effective_schema = source.effective_schema(name);
+
+        let _tempfile_guard;
+        let style_path: PathBuf = if let Some(ref theme) = source.theme {
+            let root = themepark_root.as_ref().unwrap();
+            let base = themepark::resolve_config_file(root, theme)?;
+            let tmp = themepark::generate_lua_wrapper(root, &base, source.topics.as_ref(), &effective_schema)?;
+            let path = tmp.path().to_path_buf();
+            _tempfile_guard = tmp;
+            path
+        } else {
+            _tempfile_guard = NamedTempFile::new().map_err(OsmprjError::Io)?;
+            PathBuf::from("/dev/null")
+        };
+
+        let log_path = log_dir.join(format!("{}-update.log", name.replace('/', "-")));
+
+        let spinner = ProgressBar::new_spinner();
+        spinner.set_style(spinner_style.clone());
+        spinner.set_message(format!("Updating {name}..."));
+        spinner.enable_steady_tick(std::time::Duration::from_millis(250));
+
+        match replication_update(db_url, &effective_schema, &style_path, max_diff_size_mb, &log_path, verbose).await {
+            Ok(()) => {
+                spinner.finish_with_message(format!("{} {name} updated", style("✓").green()));
+            }
+            Err(e) => {
+                spinner.finish_with_message(format!("{} {name} update failed", style("⚠").yellow()));
+                eprintln!("  {} {name}: {e}", style("⚠").yellow());
+                eprintln!("  Logs: {}", log_path.display());
+            }
+        }
+    }
+
+    // ── Phase 3b: Fresh imports ───────────────────────────────────────────────
+    if !fresh_sources.is_empty() {
+        let n_to_import = fresh_sources.iter()
+            .filter(|n| config.sources[**n].path.is_none())
+            .count();
+        println!("\n  🗺  {} file(s) ready — starting imports\n", n_to_import.max(pbf_paths.len()));
+    }
+
     let mut imported: Vec<String> = Vec::new();
 
-    for (name, source) in &sources_to_sync {
-        // 6.3 Resolve PBF path
+    for name in &fresh_sources {
+        let source = &config.sources[*name];
+
         let pbf_path = if let Some(ref p) = source.path {
             PathBuf::from(p)
         } else {
-            match pbf_paths.get(name.as_str()).cloned().or_else(|| {
-                // May have been skipped (already in lock) — reconstitute path
+            match pbf_paths.get(*name).cloned().or_else(|| {
                 let p = data_dir.join(pbf_filename(name));
                 if p.exists() { Some(p) } else { None }
             }) {
                 Some(p) => p,
                 None => {
-                    eprintln!("  ! PBF file not found for '{name}', skipping import");
+                    eprintln!("  {} PBF file not found for '{name}', skipping import", style("!").yellow());
                     continue;
                 }
             }
@@ -401,26 +550,19 @@ pub async fn run(
 
         let effective_schema = source.effective_schema(name);
 
-        // 6.5 Resolve style path
         let _tempfile_guard;
         let style_path: PathBuf = if let Some(ref theme) = source.theme {
             let root = themepark_root.as_ref().unwrap();
             let base = themepark::resolve_config_file(root, theme)?;
-            if let Some(ref topics) = source.topics {
-                let tmp = themepark::generate_lua_tempfile(root, &base, topics)?;
-                let path = tmp.path().to_path_buf();
-                _tempfile_guard = tmp;
-                path
-            } else {
-                _tempfile_guard = NamedTempFile::new().map_err(OsmprjError::Io)?; // unused guard
-                base
-            }
+            let tmp = themepark::generate_lua_wrapper(root, &base, source.topics.as_ref(), &effective_schema)?;
+            let path = tmp.path().to_path_buf();
+            _tempfile_guard = tmp;
+            path
         } else {
             _tempfile_guard = NamedTempFile::new().map_err(OsmprjError::Io)?;
-            PathBuf::from("/dev/null") // osm2pgsql requires --style; no-theme case is unusual
+            PathBuf::from("/dev/null")
         };
 
-        // 6.4 Build tuned command
         let tuner_input = tuner::TunerInput {
             system_ram_gb: ram_gb,
             pbf_size_gb,
@@ -434,25 +576,20 @@ pub async fn run(
         };
         let argv = tuner::build_command(&tuner_input);
 
-        // 6.6 Log file
         let log_path = log_dir.join(format!("{}.log", name.replace('/', "-")));
 
-        // 6.8 Globe spinner
         let spinner = ProgressBar::new_spinner();
         spinner.set_style(spinner_style.clone());
         spinner.set_message(format!("Importing {name}..."));
         spinner.enable_steady_tick(std::time::Duration::from_millis(250));
 
-        // 6.7 / 6.9 / 6.10 Spawn osm2pgsql and pipe output
-        let result = run_subprocess(&argv, &log_path, verbose, &spinner).await;
-
-        match result {
+        match run_subprocess(&argv, &log_path, verbose, &spinner).await {
             Ok(()) => {
-                spinner.finish_with_message(format!("✓ {name} imported"));
+                spinner.finish_with_message(format!("{} {name} imported", style("✓").green()));
                 imported.push(name.to_string());
             }
             Err(e) => {
-                spinner.finish_with_message(format!("✗ {name} failed"));
+                spinner.finish_with_message(format!("{} {name} failed", style("✗").red()));
                 eprintln!("\n  Import failed: {e}");
                 eprintln!("  Logs: {}", log_path.display());
                 return Err(OsmprjError::ImportFailed {
@@ -463,7 +600,7 @@ pub async fn run(
         }
     }
 
-    // ── Replication init ──────────────────────────────────────────────────────
+    // ── Replication init (fresh imports only) ─────────────────────────────────
     for name in &imported {
         let source = &config.sources[name];
         let schema = source.effective_schema(name);
@@ -480,17 +617,23 @@ pub async fn run(
         println!("done");
     }
 
-    println!("\n  🌐  Sync complete. Replication enabled for {} source(s).", imported.len());
+    let total_updated = update_sources.len();
+    let total_imported = imported.len();
+    println!(
+        "\n  🌐  Sync complete. {} updated, {} newly imported.",
+        style(format!("{total_updated} source(s)")).green(),
+        style(format!("{total_imported} source(s)")).green(),
+    );
 
     Ok(())
 }
 
 /// Looks up the PBF download URL for a Geofabrik source from the cached index.
-fn source_pbf_url(name: &str, config: &ProjectConfig) -> Option<String> {
+async fn source_pbf_url(name: &str, config: &ProjectConfig) -> Option<String> {
     let _ = config; // not needed; URL comes from geofabrik index
     // Load the cached Geofabrik index and look up the URL.
     // Re-uses the existing geofabrik module.
-    let features = crate::geofabrik::load_index().ok()?;
+    let features = crate::geofabrik::load_index().await.ok()?;
     let feature = crate::geofabrik::lookup(name, &features)?;
     feature.properties.urls.as_ref()?.pbf.clone()
 }

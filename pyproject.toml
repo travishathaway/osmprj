@@ -34,7 +34,7 @@ xfail_strict = true
 
 [tool.pixi.workspace]
 channels = ["https://prefix.dev/gis-forge", "https://prefix.dev/thath", "conda-forge"]
-platforms = ["linux-64"] # ["osx-arm64", "osx-64", "linux-64", "win-64"]
+platforms = ["linux-64", "osx-arm64"]
 
 [tool.pixi.pypi-dependencies]
 osmprj = { path = ".", editable = true }
