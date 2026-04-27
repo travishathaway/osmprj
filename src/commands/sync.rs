@@ -1,0 +1,497 @@
+use crate::config::{ProjectConfig, SourceConfig};
+use tempfile::NamedTempFile;
+use crate::error::OsmprjError;
+use crate::lock::{LockFile, SourceLockEntry};
+use crate::{themepark, tuner};
+use chrono::Utc;
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use md5::{Digest, Md5};
+use std::io::Write as _;
+use std::path::{Path, PathBuf};
+use std::process::Stdio;
+use std::sync::{Arc, Mutex};
+use tokio::fs as tfs;
+use tokio::io::{AsyncBufReadExt, BufReader};
+
+// ─── helpers ─────────────────────────────────────────────────────────────────
+
+fn which(binary: &str) -> bool {
+    std::process::Command::new("which")
+        .arg(binary)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
+fn pbf_filename(source_name: &str) -> String {
+    format!("{}.osm.pbf", source_name.replace('/', "-"))
+}
+
+/// Compute MD5 of a file on disk.
+async fn file_md5(path: &Path) -> Result<String, OsmprjError> {
+    let bytes = tfs::read(path).await.map_err(OsmprjError::Io)?;
+    let hash = Md5::digest(&bytes);
+    Ok(format!("{hash:x}"))
+}
+
+/// Fetch the `.md5` sidecar from Geofabrik and return the hash string.
+async fn fetch_remote_md5(client: &reqwest::Client, pbf_url: &str) -> Result<String, OsmprjError> {
+    let md5_url = format!("{pbf_url}.md5");
+    let text = client
+        .get(&md5_url)
+        .send()
+        .await
+        .map_err(|e| OsmprjError::DownloadFailed { url: md5_url.clone(), message: e.to_string() })?
+        .text()
+        .await
+        .map_err(|e| OsmprjError::DownloadFailed { url: md5_url, message: e.to_string() })?;
+    // Format: "<hash>  <filename>\n"
+    Ok(text.split_whitespace().next().unwrap_or("").to_string())
+}
+
+/// Stream a single PBF file to disk with a progress bar; return bytes written.
+async fn download_pbf(
+    client: &reqwest::Client,
+    url: &str,
+    dest: &Path,
+    bar: &ProgressBar,
+) -> Result<(), OsmprjError> {
+    let response = client
+        .get(url)
+        .send()
+        .await
+        .map_err(|e| OsmprjError::DownloadFailed { url: url.to_string(), message: e.to_string() })?;
+
+    if !response.status().is_success() {
+        return Err(OsmprjError::DownloadFailed {
+            url: url.to_string(),
+            message: format!("HTTP {}", response.status()),
+        });
+    }
+
+    if let Some(len) = response.content_length() {
+        bar.set_length(len);
+    }
+
+    let mut file = tfs::File::create(dest).await.map_err(OsmprjError::Io)?;
+    let mut stream = response;
+
+    while let Some(chunk) = stream
+        .chunk()
+        .await
+        .map_err(|e| OsmprjError::DownloadFailed { url: url.to_string(), message: e.to_string() })?
+    {
+        tokio::io::AsyncWriteExt::write_all(&mut file, &chunk).await.map_err(OsmprjError::Io)?;
+        bar.inc(chunk.len() as u64);
+    }
+
+    Ok(())
+}
+
+// ─── download phase ──────────────────────────────────────────────────────────
+
+struct DownloadResult {
+    source_name: String,
+    entry: SourceLockEntry,
+    pbf_path: PathBuf,
+}
+
+async fn download_source(
+    client: Arc<reqwest::Client>,
+    source_name: String,
+    url: String,
+    dest: PathBuf,
+    bar: ProgressBar,
+) -> Result<DownloadResult, (String, OsmprjError)> {
+    let err = |e| (source_name.clone(), e);
+
+    download_pbf(&client, &url, &dest, &bar).await.map_err(err)?;
+
+    let remote_md5 = fetch_remote_md5(&client, &url).await.map_err(err)?;
+    let local_md5 = file_md5(&dest).await.map_err(err)?;
+
+    if remote_md5 != local_md5 {
+        return Err((
+            source_name.clone(),
+            OsmprjError::Md5Mismatch {
+                name: source_name,
+                expected: remote_md5,
+                actual: local_md5,
+            },
+        ));
+    }
+
+    bar.finish_with_message("✓");
+
+    Ok(DownloadResult {
+        source_name,
+        pbf_path: dest,
+        entry: SourceLockEntry { url, md5: local_md5, downloaded_at: Utc::now() },
+    })
+}
+
+// ─── import helpers ──────────────────────────────────────────────────────────
+
+async fn pipe_to_log(
+    reader: impl tokio::io::AsyncRead + Unpin,
+    log: Arc<Mutex<std::fs::File>>,
+    verbose: bool,
+) {
+    let mut lines = BufReader::new(reader).lines();
+    while let Ok(Some(line)) = lines.next_line().await {
+        if verbose {
+            println!("{line}");
+        }
+        if let Ok(mut f) = log.lock() {
+            let _ = writeln!(f, "{line}");
+        }
+    }
+}
+
+async fn run_subprocess(
+    argv: &[String],
+    log_path: &Path,
+    verbose: bool,
+    spinner: &ProgressBar,
+) -> Result<(), OsmprjError> {
+    let log_file =
+        std::fs::File::create(log_path).map_err(OsmprjError::Io)?;
+    let log = Arc::new(Mutex::new(log_file));
+
+    let mut child = tokio::process::Command::new(&argv[0])
+        .args(&argv[1..])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(OsmprjError::Io)?;
+
+    let stdout = child.stdout.take().unwrap();
+    let stderr = child.stderr.take().unwrap();
+
+    if verbose {
+        spinner.finish_and_clear();
+    }
+
+    let log_out = Arc::clone(&log);
+    let log_err = Arc::clone(&log);
+    let stdout_task = tokio::spawn(pipe_to_log(stdout, log_out, verbose));
+    let stderr_task = tokio::spawn(pipe_to_log(stderr, log_err, verbose));
+
+    let status = child.wait().await.map_err(OsmprjError::Io)?;
+    let _ = tokio::join!(stdout_task, stderr_task);
+
+    if !status.success() {
+        return Err(OsmprjError::ImportFailed {
+            name: argv[0].clone(),
+            code: status.code().unwrap_or(-1),
+        });
+    }
+
+    Ok(())
+}
+
+// ─── replication init ─────────────────────────────────────────────────────────
+
+async fn replication_init(
+    database_url: &str,
+    schema: &str,
+    log_path: &Path,
+    verbose: bool,
+) -> Result<(), OsmprjError> {
+    let log_file = std::fs::File::create(log_path).map_err(OsmprjError::Io)?;
+    let log = Arc::new(Mutex::new(log_file));
+
+    let mut child = tokio::process::Command::new("osm2pgsql-replication")
+        .args(["init", "-d", database_url, "--schema", schema])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(OsmprjError::Io)?;
+
+    let stdout = child.stdout.take().unwrap();
+    let stderr = child.stderr.take().unwrap();
+
+    let log_out = Arc::clone(&log);
+    let log_err = Arc::clone(&log);
+    let stdout_task = tokio::spawn(pipe_to_log(stdout, log_out, verbose));
+    let stderr_task = tokio::spawn(pipe_to_log(stderr, log_err, verbose));
+
+    let status = child.wait().await.map_err(OsmprjError::Io)?;
+    let _ = tokio::join!(stdout_task, stderr_task);
+
+    if !status.success() {
+        return Err(OsmprjError::ReplicationInitFailed {
+            name: schema.to_string(),
+            code: status.code().unwrap_or(-1),
+        });
+    }
+
+    Ok(())
+}
+
+// ─── public entry point ───────────────────────────────────────────────────────
+
+pub async fn run(
+    requested_sources: Vec<String>,
+    verbose: bool,
+    config: &ProjectConfig,
+) -> Result<(), OsmprjError> {
+    // 5.2 Validate source filter
+    if !requested_sources.is_empty() {
+        let unknown: Vec<_> = requested_sources
+            .iter()
+            .filter(|s| !config.sources.contains_key(s.as_str()))
+            .cloned()
+            .collect();
+        if !unknown.is_empty() {
+            return Err(OsmprjError::UnknownSources { names: unknown.join(", ") });
+        }
+    }
+
+    // 5.3 Check required binaries
+    for bin in ["osm2pgsql", "osm2pgsql-replication"] {
+        if !which(bin) {
+            return Err(OsmprjError::BinaryNotFound { binary: bin.to_string() });
+        }
+    }
+
+    let sources_to_sync: Vec<(&String, &SourceConfig)> = config
+        .sources
+        .iter()
+        .filter(|(name, _)| {
+            requested_sources.is_empty() || requested_sources.contains(name)
+        })
+        .collect();
+
+    // 5.4 Resolve data_dir
+    let data_dir = config.project.effective_data_dir();
+    std::fs::create_dir_all(&data_dir).map_err(OsmprjError::Io)?;
+
+    let cache_dir =
+        dirs::cache_dir().unwrap_or_else(|| PathBuf::from(".cache"));
+
+    let mut lock = LockFile::load()?;
+
+    // ── Phase 1: Downloads ────────────────────────────────────────────────────
+    let mp = MultiProgress::new();
+    let bar_style = ProgressStyle::with_template(
+        "  {spinner:.cyan} {msg:<35} [{bar:40.green/white}] {bytes}/{total_bytes} ({bytes_per_sec}, eta {eta})",
+    )
+    .unwrap()
+    .progress_chars("█▓░");
+
+    let client = Arc::new(
+        reqwest::Client::builder()
+            .build()
+            .map_err(|e| OsmprjError::DownloadFailed {
+                url: String::new(),
+                message: e.to_string(),
+            })?,
+    );
+
+    let mut set = tokio::task::JoinSet::new();
+
+    for (name, source) in &sources_to_sync {
+        // Skip local path sources and already-locked sources
+        if source.path.is_some() {
+            continue;
+        }
+        if lock.sources.contains_key(name.as_str()) {
+            println!("  ⊙ {} already downloaded, skipping", name);
+            continue;
+        }
+
+        let url = match source_pbf_url(name, config) {
+            Some(u) => u,
+            None => {
+                eprintln!("  ! No download URL for source '{name}', skipping");
+                continue;
+            }
+        };
+
+        let dest = data_dir.join(pbf_filename(name));
+        let bar = mp.add(ProgressBar::new(0));
+        bar.set_style(bar_style.clone());
+        bar.set_message(format!("{name}.osm.pbf"));
+
+        let client = Arc::clone(&client);
+        let name = (*name).clone();
+        set.spawn(download_source(client, name, url, dest, bar));
+    }
+
+    // Drain the JoinSet; write lock incrementally after each success
+    let mut errors: Vec<(String, OsmprjError)> = Vec::new();
+    let mut pbf_paths: std::collections::HashMap<String, PathBuf> = std::collections::HashMap::new();
+
+    while let Some(result) = set.join_next().await {
+        match result.expect("task panicked") {
+            Ok(dl) => {
+                pbf_paths.insert(dl.source_name.clone(), dl.pbf_path);
+                lock.set_source(dl.source_name, dl.entry)?;
+            }
+            Err((name, e)) => errors.push((name, e)),
+        }
+    }
+
+    mp.clear().ok();
+
+    if !errors.is_empty() {
+        for (name, e) in &errors {
+            eprintln!("  ✗ {name}: {e}");
+        }
+        return Err(OsmprjError::DownloadFailed {
+            url: String::new(),
+            message: format!("{} download(s) failed", errors.len()),
+        });
+    }
+
+    // 6.1 Transition message
+    let n_ready = sources_to_sync
+        .iter()
+        .filter(|(_, s)| s.path.is_none())
+        .count();
+    println!("\n  🗺  {} file(s) ready — starting imports\n", n_ready.max(pbf_paths.len()));
+
+    // ── Phase 2: Imports ──────────────────────────────────────────────────────
+
+    // 6.2 Ensure themepark cached (only if any source has a theme)
+    let needs_themepark = sources_to_sync.iter().any(|(_, s)| s.theme.is_some());
+    let themepark_root = if needs_themepark {
+        Some(themepark::ensure_cached(&cache_dir, &mut lock).await?)
+    } else {
+        None
+    };
+
+    let log_dir = config.project.effective_log_dir();
+    std::fs::create_dir_all(&log_dir).map_err(OsmprjError::Io)?;
+
+    let db_url = config.project.database_url.as_deref().unwrap_or("");
+    let ram_gb = tuner::system_ram_gb();
+    let ssd = config.project.effective_ssd();
+
+    let spinner_style = ProgressStyle::with_template("  {spinner} {msg}")
+        .unwrap()
+        .tick_strings(&["🌍 ", "🌎 ", "🌏 ", "🌐 ", "🌍 "]);
+
+    let mut imported: Vec<String> = Vec::new();
+
+    for (name, source) in &sources_to_sync {
+        // 6.3 Resolve PBF path
+        let pbf_path = if let Some(ref p) = source.path {
+            PathBuf::from(p)
+        } else {
+            match pbf_paths.get(name.as_str()).cloned().or_else(|| {
+                // May have been skipped (already in lock) — reconstitute path
+                let p = data_dir.join(pbf_filename(name));
+                if p.exists() { Some(p) } else { None }
+            }) {
+                Some(p) => p,
+                None => {
+                    eprintln!("  ! PBF file not found for '{name}', skipping import");
+                    continue;
+                }
+            }
+        };
+
+        let pbf_size_gb = std::fs::metadata(&pbf_path)
+            .map(|m| m.len() as f64 / 1_073_741_824.0)
+            .unwrap_or(0.0);
+
+        let effective_schema = source.effective_schema(name);
+
+        // 6.5 Resolve style path
+        let _tempfile_guard;
+        let style_path: PathBuf = if let Some(ref theme) = source.theme {
+            let root = themepark_root.as_ref().unwrap();
+            let base = themepark::resolve_config_file(root, theme)?;
+            if let Some(ref topics) = source.topics {
+                let tmp = themepark::generate_lua_tempfile(root, &base, topics)?;
+                let path = tmp.path().to_path_buf();
+                _tempfile_guard = tmp;
+                path
+            } else {
+                _tempfile_guard = NamedTempFile::new().map_err(OsmprjError::Io)?; // unused guard
+                base
+            }
+        } else {
+            _tempfile_guard = NamedTempFile::new().map_err(OsmprjError::Io)?;
+            PathBuf::from("/dev/null") // osm2pgsql requires --style; no-theme case is unusual
+        };
+
+        // 6.4 Build tuned command
+        let tuner_input = tuner::TunerInput {
+            system_ram_gb: ram_gb,
+            pbf_size_gb,
+            ssd,
+            database_url: db_url.to_string(),
+            effective_schema: effective_schema.clone(),
+            pbf_path: pbf_path.clone(),
+            style_path: style_path.clone(),
+            data_dir: data_dir.clone(),
+            source_name: name.to_string(),
+        };
+        let argv = tuner::build_command(&tuner_input);
+
+        // 6.6 Log file
+        let log_path = log_dir.join(format!("{}.log", name.replace('/', "-")));
+
+        // 6.8 Globe spinner
+        let spinner = ProgressBar::new_spinner();
+        spinner.set_style(spinner_style.clone());
+        spinner.set_message(format!("Importing {name}..."));
+        spinner.enable_steady_tick(std::time::Duration::from_millis(250));
+
+        // 6.7 / 6.9 / 6.10 Spawn osm2pgsql and pipe output
+        let result = run_subprocess(&argv, &log_path, verbose, &spinner).await;
+
+        match result {
+            Ok(()) => {
+                spinner.finish_with_message(format!("✓ {name} imported"));
+                imported.push(name.to_string());
+            }
+            Err(e) => {
+                spinner.finish_with_message(format!("✗ {name} failed"));
+                eprintln!("\n  Import failed: {e}");
+                eprintln!("  Logs: {}", log_path.display());
+                return Err(OsmprjError::ImportFailed {
+                    name: name.to_string(),
+                    code: 1,
+                });
+            }
+        }
+    }
+
+    // ── Replication init ──────────────────────────────────────────────────────
+    for name in &imported {
+        let source = &config.sources[name];
+        let schema = source.effective_schema(name);
+        let log_path = log_dir.join(format!("{}-replication-init.log", name.replace('/', "-")));
+
+        print!("  Initialising replication for {name}... ");
+        std::io::stdout().flush().ok();
+
+        if let Err(e) = replication_init(db_url, &schema, &log_path, verbose).await {
+            eprintln!("failed");
+            return Err(e);
+        }
+
+        println!("done");
+    }
+
+    println!("\n  🌐  Sync complete. Replication enabled for {} source(s).", imported.len());
+
+    Ok(())
+}
+
+/// Looks up the PBF download URL for a Geofabrik source from the cached index.
+fn source_pbf_url(name: &str, config: &ProjectConfig) -> Option<String> {
+    let _ = config; // not needed; URL comes from geofabrik index
+    // Load the cached Geofabrik index and look up the URL.
+    // Re-uses the existing geofabrik module.
+    let features = crate::geofabrik::load_index().ok()?;
+    let feature = crate::geofabrik::lookup(name, &features)?;
+    feature.properties.urls.as_ref()?.pbf.clone()
+}
+

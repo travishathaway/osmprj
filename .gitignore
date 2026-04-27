@@ -132,3 +132,11 @@ dmypy.json
 .idea/
 data
 config.json
+# pixi environments
+.pixi/*
+!.pixi/config.toml
+
+# project specific
+osmprj.*
+postgres/
+reports/
