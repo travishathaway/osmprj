@@ -1,5 +1,20 @@
 ## ADDED Requirements
 
+### Requirement: All HTTP requests MUST be async
+The system SHALL use only the async `reqwest` API (`reqwest::Client`, not `reqwest::blocking`) for all downloads and MD5 sidecar fetches. The `blocking` feature of the `reqwest` crate SHALL NOT be enabled in `Cargo.toml`. Mixing the blocking transport with a Tokio runtime causes a runtime-within-runtime panic on macOS.
+
+#### Scenario: No blocking reqwest feature
+- **WHEN** `Cargo.toml` is inspected
+- **THEN** the `reqwest` dependency does not include `"blocking"` in its feature list
+
+#### Scenario: PBF download uses async client
+- **WHEN** a PBF file is streamed from Geofabrik
+- **THEN** the download uses an `Arc<reqwest::Client>` and `.await`, never blocking calls
+
+#### Scenario: MD5 sidecar fetch uses async client
+- **WHEN** the `.md5` sidecar file is fetched after a download
+- **THEN** it uses the same async client as the download, never blocking calls
+
 ### Requirement: Sync accepts optional source filter
 `osmprj sync` SHALL accept zero or more positional `source` arguments. When provided, only those sources SHALL be processed. When omitted, all sources in `osmprj.toml` SHALL be processed. Unknown source names SHALL produce an error and exit non-zero before any downloads begin.
 
