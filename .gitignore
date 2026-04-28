@@ -131,6 +131,7 @@ dmypy.json
 # Custom stuff
 .idea/
 data
+!tests/data/
 config.json
 # pixi environments
 .pixi/*
