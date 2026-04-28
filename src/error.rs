@@ -34,6 +34,13 @@ pub enum OsmprjError {
     )]
     DuplicateSource { name: String },
 
+    #[error("Source '{name}' not found in osmprj.toml")]
+    #[diagnostic(
+        code(osmprj::source_not_found),
+        help("Run `osmprj status` to list configured sources")
+    )]
+    SourceNotFound { name: String },
+
     #[error("'{id}' was not found in the Geofabrik index")]
     #[diagnostic(
         code(osmprj::unknown_geofabrik_id),

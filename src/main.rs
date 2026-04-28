@@ -54,7 +54,16 @@ enum Commands {
         sources: Vec<String>,
     },
     /// Remove a data source from osmprj.toml
-    Remove,
+    Remove {
+        /// Source names to remove
+        sources: Vec<String>,
+        /// Preview what would be removed without making any changes
+        #[arg(long)]
+        dry_run: bool,
+        /// Skip the confirmation prompt
+        #[arg(short = 'f', long)]
+        force: bool,
+    },
     /// Remove all OSM data from the configured database
     Destroy,
 }
@@ -82,9 +91,9 @@ async fn main() -> miette::Result<()> {
             let config = ProjectConfig::load()?.ok_or(error::OsmprjError::ProjectNotFound)?;
             commands::sync::run(sources, verbose, &config).await
         }
-        Commands::Remove => {
-            println!("remove: not yet implemented");
-            Ok(())
+        Commands::Remove { sources, dry_run, force } => {
+            let config = ProjectConfig::load()?.ok_or(error::OsmprjError::ProjectNotFound)?;
+            commands::remove::run(sources, dry_run, force, &config).await
         }
         Commands::Destroy => {
             println!("destroy: not yet implemented");
