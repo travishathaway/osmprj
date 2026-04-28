@@ -74,6 +74,19 @@ def isolated_project(run_cmd, pg_e2e, tmp_path):
         conn.execute(f'DROP SCHEMA IF EXISTS "{SCHEMA_NAME}" CASCADE')
 
 
+@pytest.fixture
+def geofabrik_project(run_cmd, pg_e2e, tmp_path):
+    """Per-test geofabrik sources project with a fresh source + seeded schema."""
+    source = "monaco"
+
+    run_cmd("init", "--db", pg_e2e, cwd=tmp_path)
+    run_cmd("add", source, cwd=tmp_path)
+    run_cmd("sync", cwd=tmp_path)
+
+    yield {"project": tmp_path, "db_url": pg_e2e, "source": source}
+
+    run_cmd("remove", "monaco", cwd=tmp_path)
+
 # ---------------------------------------------------------------------------
 # 5.3 — remove --force removes entry from osmprj.toml
 # ---------------------------------------------------------------------------
@@ -122,25 +135,28 @@ def test_remove_force_drops_schema(isolated_project, run_cmd):
 # 5.6 — remove --dry-run leaves everything unchanged
 # ---------------------------------------------------------------------------
 
-def test_dry_run_leaves_toml_unchanged(isolated_project, run_cmd):
-    project = isolated_project["project"]
+def test_dry_run_leaves_toml_unchanged(geofabrik_project, run_cmd):
+    project = geofabrik_project["project"]
+    source = geofabrik_project["source"]
     original = (project / "osmprj.toml").read_text()
-    run_cmd("remove", "--dry-run", SOURCE_NAME, cwd=project)
+    run_cmd("remove", "--dry-run", source, cwd=project)
     assert (project / "osmprj.toml").read_text() == original
 
 
-def test_dry_run_leaves_lock_unchanged(isolated_project, run_cmd):
-    project = isolated_project["project"]
+def test_dry_run_leaves_lock_unchanged(geofabrik_project, run_cmd):
+    project = geofabrik_project["project"]
+    source = geofabrik_project["source"]
     original = (project / "osmprj.lock").read_text()
-    run_cmd("remove", "--dry-run", SOURCE_NAME, cwd=project)
+    run_cmd("remove", "--dry-run", source, cwd=project)
     assert (project / "osmprj.lock").read_text() == original
 
 
-def test_dry_run_leaves_schema_intact(isolated_project, run_cmd):
-    project = isolated_project["project"]
-    db_url = isolated_project["db_url"]
-    run_cmd("remove", "--dry-run", SOURCE_NAME, cwd=project)
-    assert _schema_exists(db_url, SCHEMA_NAME), f"Schema '{SCHEMA_NAME}' was dropped by dry-run"
+def test_dry_run_leaves_schema_intact(geofabrik_project, run_cmd):
+    project = geofabrik_project["project"]
+    db_url = geofabrik_project["db_url"]
+    source = geofabrik_project["source"]
+    run_cmd("remove", "--dry-run", source, cwd=project)
+    assert _schema_exists(db_url, source), f"Schema '{source}' was dropped by dry-run"
 
 
 # ---------------------------------------------------------------------------
