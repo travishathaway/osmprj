@@ -54,7 +54,7 @@ def source_state(request, run_cmd, pg_e2e, tmp_path_factory):
             ).fetchone()
             ts_before = row[0] if row else None
 
-    second_sync = run_cmd("sync", cwd=project, check=False)
+    second_sync = run_cmd("sync", "--verbose", cwd=project, check=False)
 
     ts_after = None
     if second_sync.returncode == 0:
