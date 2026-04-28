@@ -18,7 +18,7 @@ import psycopg
 import pytest
 
 SYNC_SOURCES = [
-    pytest.param(("andorra", "andorra", "shortbread_v1"), id="andorra"),
+    pytest.param(("monaco", "monaco", "shortbread_v1"), id="monaco"),
     # pytest.param(("liechtenstein", "liechtenstein", "shortbread_v1"), id="liechtenstein"),
 ]
 

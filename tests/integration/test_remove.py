@@ -85,7 +85,7 @@ def geofabrik_project(run_cmd, pg_e2e, tmp_path):
 
     yield {"project": tmp_path, "db_url": pg_e2e, "source": source}
 
-    run_cmd("remove", "monaco", cwd=tmp_path)
+    run_cmd("remove", "--force", "monaco", cwd=tmp_path)
 
 # ---------------------------------------------------------------------------
 # 5.3 — remove --force removes entry from osmprj.toml
