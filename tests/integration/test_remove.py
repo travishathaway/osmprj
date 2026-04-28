@@ -81,7 +81,7 @@ def geofabrik_project(run_cmd, pg_e2e, tmp_path):
 
     run_cmd("init", "--db", pg_e2e, cwd=tmp_path)
     run_cmd("add", source, cwd=tmp_path)
-    run_cmd("sync", cwd=tmp_path)
+    run_cmd("sync", "--verbose", cwd=tmp_path)
 
     yield {"project": tmp_path, "db_url": pg_e2e, "source": source}
 
