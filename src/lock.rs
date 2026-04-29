@@ -64,4 +64,8 @@ impl LockFile {
         self.save()
     }
 
+    pub fn remove_source(&mut self, name: &str) -> Result<(), OsmprjError> {
+        self.sources.remove(name);
+        self.save()
+    }
 }

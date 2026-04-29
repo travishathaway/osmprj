@@ -18,7 +18,7 @@ import psycopg
 import pytest
 
 SYNC_SOURCES = [
-    pytest.param(("andorra", "andorra", "shortbread_v1"), id="andorra"),
+    pytest.param(("monaco", "monaco", "shortbread_v1"), id="monaco"),
     # pytest.param(("liechtenstein", "liechtenstein", "shortbread_v1"), id="liechtenstein"),
 ]
 
@@ -43,7 +43,7 @@ def source_state(request, run_cmd, pg_e2e, tmp_path_factory):
     run_cmd("init", "--db", pg_e2e, cwd=project)
     run_cmd("add", geofabrik_id, "--theme", theme, cwd=project)
 
-    first_sync = run_cmd("sync", cwd=project, check=False)
+    first_sync = run_cmd("sync", "--verbose", cwd=project, check=False)
 
     ts_before = None
     if first_sync.returncode == 0:
@@ -54,7 +54,7 @@ def source_state(request, run_cmd, pg_e2e, tmp_path_factory):
             ).fetchone()
             ts_before = row[0] if row else None
 
-    second_sync = run_cmd("sync", cwd=project, check=False)
+    second_sync = run_cmd("sync", "--verbose", cwd=project, check=False)
 
     ts_after = None
     if second_sync.returncode == 0:

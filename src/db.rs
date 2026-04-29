@@ -52,3 +52,12 @@ pub async fn create_schema(client: &Client, schema: &str) -> Result<(), OsmprjEr
         .map_err(|e| OsmprjError::DatabaseQueryFailed { message: e.to_string() })?;
     Ok(())
 }
+
+pub async fn drop_schema(client: &Client, schema: &str) -> Result<(), OsmprjError> {
+    let sql = format!("DROP SCHEMA IF EXISTS \"{schema}\" CASCADE");
+    client
+        .execute(sql.as_str(), &[])
+        .await
+        .map_err(|e| OsmprjError::DatabaseQueryFailed { message: e.to_string() })?;
+    Ok(())
+}

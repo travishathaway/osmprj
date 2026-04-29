@@ -63,7 +63,7 @@ def pg_e2e(tmpdir_factory):
     )
     # Destroy
     subprocess.run(
-        ["pg-helper", "--data-dir", tmp_data_dir, "--port", "65112", "destroy"],
+        ["pg-helper", "--data-dir", tmp_data_dir, "--port", "65112", "destroy", "--force"],
         check=True
     )
 
