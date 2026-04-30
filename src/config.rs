@@ -13,11 +13,20 @@ pub struct TopicsConfig {
 }
 
 #[derive(Debug, Default, Deserialize)]
+pub struct PostProcessConfig {
+    /// Whether to run the theme's bundled SQL files after import (default: true).
+    pub include_theme_sql: Option<bool>,
+    /// Additional SQL file paths (relative to osmprj.toml) to run after import.
+    pub extra_sql: Option<Vec<String>>,
+}
+
+#[derive(Debug, Default, Deserialize)]
 pub struct SourceConfig {
     pub path: Option<String>,
     pub theme: Option<String>,
     pub schema: Option<String>,
     pub topics: Option<TopicsConfig>,
+    pub postprocess: Option<PostProcessConfig>,
 }
 
 impl SourceConfig {

@@ -1,7 +1,8 @@
 use crate::config::{ProjectConfig, SourceConfig};
 use crate::error::OsmprjError;
 use crate::geofabrik;
-use crate::{db};
+use crate::theme_registry::ThemeRegistry;
+use crate::{db, themepark};
 use miette::NamedSource;
 use std::fs;
 use std::path::Path;
@@ -16,6 +17,23 @@ pub async fn run(
 ) -> Result<(), OsmprjError> {
     if !Path::new("osmprj.toml").exists() {
         return Err(OsmprjError::ProjectNotFound);
+    }
+
+    // Validate the theme exists (plugin registry or built-in) before writing anything.
+    if let Some(ref theme_name) = theme {
+        let registry = ThemeRegistry::build();
+        if registry.find(theme_name).is_none() && !themepark::is_builtin_theme(theme_name) {
+            let paths_formatted = registry
+                .searched_paths()
+                .iter()
+                .map(|p| format!("    {}", p.display()))
+                .collect::<Vec<_>>()
+                .join("\n");
+            return Err(OsmprjError::PluginThemeNotFound {
+                name: theme_name.clone(),
+                searched_paths: paths_formatted,
+            });
+        }
     }
 
     // Build list of (source_name, pbf_path) pairs to add.

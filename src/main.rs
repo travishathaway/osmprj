@@ -4,6 +4,7 @@ mod db;
 mod error;
 mod geofabrik;
 mod lock;
+mod theme_registry;
 mod themepark;
 mod tuner;
 
@@ -39,7 +40,7 @@ enum Commands {
         /// Source name/label (required with --path)
         #[arg(long)]
         name: Option<String>,
-        /// Themepark theme (e.g. shortbread_v1, basic)
+        /// Themepark theme (e.g. shortbread_v1, basic) or plugin theme name
         #[arg(long)]
         theme: Option<String>,
         /// PostgreSQL schema name (defaults to normalized source name; cannot be used with multiple IDs)
@@ -66,6 +67,17 @@ enum Commands {
     },
     /// Remove all OSM data from the configured database
     Destroy,
+    /// Manage and inspect installed themes
+    Themes {
+        #[command(subcommand)]
+        subcommand: ThemesCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum ThemesCommands {
+    /// List all available themes (plugin and built-in)
+    List,
 }
 
 #[tokio::main]
@@ -98,6 +110,9 @@ async fn main() -> miette::Result<()> {
         Commands::Destroy => {
             println!("destroy: not yet implemented");
             Ok(())
+        }
+        Commands::Themes { subcommand: ThemesCommands::List } => {
+            commands::themes::run_list()
         }
     }
     .map_err(miette::Report::new)?;
