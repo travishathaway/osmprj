@@ -21,7 +21,7 @@ jobs:
           cache: true
 
       - name: Build Rust binary
-        run: pixi run --environment rust build-rust
+        run: pixi run --environment rust release
 
       - name: Fast tests
         run: pixi run --environment dev pytest -m "not slow"
