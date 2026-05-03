@@ -3,13 +3,12 @@
 A command-line tool for managing OpenStreetMap data imports into PostgreSQL. It wraps `osm2pgsql` to automate downloading PBF files from Geofabrik, tuning import parameters for your hardware, running incremental updates, and tracking source state across runs.
 
 > [!WARNING]
-> **osmprj is experimental software under active development.** Commands, configuration formats, and behaviour may change without notice between versions. It is not yet recommended for production use. Feedback and bug reports are very welcome — see the [Contributing](#contributing) section below.
+> **osmprj is experimental software under active development.** Commands, configuration formats, and behavior may change without notice between versions. It is not yet recommended for production use. Feedback and bug reports are very welcome — see the [Contributing](#contributing) section below.
 
 ---
 
 ## Table of Contents
 
-- [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Command Reference](#command-reference)
@@ -25,34 +24,20 @@ A command-line tool for managing OpenStreetMap data imports into PostgreSQL. It 
 
 ---
 
-## Prerequisites
-
-osmprj coordinates several external tools. Make sure these are installed and on your `PATH` before use:
-
-| Dependency | Notes |
-|---|---|
-| **PostgreSQL** with **PostGIS** | The target database for OSM data |
-| **osm2pgsql ≥ 2** | The underlying import engine |
-| **osm2pgsql-replication** | Bundled with osm2pgsql since v1.9; handles incremental updates |
-| **osm2pgsql-themepark** _(optional)_ | Required when using `--theme`. Set `THEMEPARK_PATH` to its root directory |
-
----
-
 ## Installation
 
-Build from source with Cargo:
+The best way to install `osmprj` is as a conda package.
 
-```bash
-git clone https://github.com/travishathaway/osmprj
-cd osmprj
-cargo build --release
-# Binary is at target/release/osmprj
+With `pixi global`:
+
+```
+pixi global install -c gis-forge -c conda-forge osmprj
 ```
 
-Or, if you use [pixi](https://pixi.sh):
+Or by creating a standalone conda environment:
 
-```bash
-pixi run build-rust
+```
+conda create -n osmprj -c gis-forge -c conda-forge osmprj
 ```
 
 ---

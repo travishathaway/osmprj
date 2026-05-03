@@ -1,10 +1,12 @@
 @echo off
 
+cd /d "%SRC_DIR%"
+
 REM Build Rust binary
 cargo auditable install --locked --no-track --bins --root "%PREFIX%" --path .
 if errorlevel 1 exit /b 1
 
-cargo-bundle-licenses --format yaml --output THIRDPARTY.yml
+cargo-bundle-licenses --format yaml --output "%SRC_DIR%\THIRDPARTY.yml"
 if errorlevel 1 exit /b 1
 
 REM Move default themes to themes directory
