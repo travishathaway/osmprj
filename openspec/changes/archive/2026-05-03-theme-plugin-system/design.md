@@ -134,8 +134,6 @@ $ osmprj themes list
   /opt/conda/envs/foo/share/osmprj/themes/shortbread-v2
   sql: 01_indexes.sql, 02_views.sql
 
-  BUILT-IN (themepark)
-  shortbread_v1, shortbread_v1_gen, basic, generic, osmcarto, experimental
 ```
 
 ### 7. New module: `src/theme_registry.rs`

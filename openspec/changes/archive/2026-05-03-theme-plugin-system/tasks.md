@@ -62,9 +62,9 @@
 
 ## 10. Verification
 
-- [ ] 10.1 Run `cargo build` and confirm it compiles without errors or warnings
-- [ ] 10.2 Run `cargo clippy` and address any lint warnings
-- [ ] 10.3 Run `cargo test` and confirm all unit tests pass
-- [ ] 10.4 Manually create a minimal test theme directory (a `theme.toml` + stub `.lua` file), point `OSMPRJ_THEME_PATH` at its parent, and confirm `osmprj themes list` shows it
-- [ ] 10.5 Manually confirm `osmprj add --theme <nonexistent>` prints the `PluginThemeNotFound` diagnostic with searched paths
-- [ ] 10.6 Run `pytest tests/integration` and confirm existing and new integration tests pass
+- [x] 10.1 Run `cargo build` and confirm it compiles without errors or warnings
+- [x] 10.2 Run `cargo clippy` and address any lint warnings
+- [x] 10.3 Run `cargo test` and confirm all unit tests pass
+- [x] 10.4 Manually create a minimal test theme directory (a `theme.toml` + stub `.lua` file), point `OSMPRJ_THEME_PATH` at its parent, and confirm `osmprj themes list` shows it
+- [x] 10.5 Manually confirm `osmprj add --theme <nonexistent>` prints the `PluginThemeNotFound` diagnostic with searched paths
+- [x] 10.6 Run `pytest tests/integration` and confirm existing and new integration tests pass
