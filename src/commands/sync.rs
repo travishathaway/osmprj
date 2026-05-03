@@ -44,10 +44,16 @@ async fn fetch_remote_md5(client: &reqwest::Client, pbf_url: &str) -> Result<Str
         .get(&md5_url)
         .send()
         .await
-        .map_err(|e| OsmprjError::DownloadFailed { url: md5_url.clone(), message: e.to_string() })?
+        .map_err(|e| OsmprjError::DownloadFailed {
+            url: md5_url.clone(),
+            message: e.to_string(),
+        })?
         .text()
         .await
-        .map_err(|e| OsmprjError::DownloadFailed { url: md5_url, message: e.to_string() })?;
+        .map_err(|e| OsmprjError::DownloadFailed {
+            url: md5_url,
+            message: e.to_string(),
+        })?;
     // Format: "<hash>  <filename>\n"
     Ok(text.split_whitespace().next().unwrap_or("").to_string())
 }
@@ -63,7 +69,10 @@ async fn download_pbf(
         .get(url)
         .send()
         .await
-        .map_err(|e| OsmprjError::DownloadFailed { url: url.to_string(), message: e.to_string() })?;
+        .map_err(|e| OsmprjError::DownloadFailed {
+            url: url.to_string(),
+            message: e.to_string(),
+        })?;
 
     if !response.status().is_success() {
         return Err(OsmprjError::DownloadFailed {
@@ -82,9 +91,14 @@ async fn download_pbf(
     while let Some(chunk) = stream
         .chunk()
         .await
-        .map_err(|e| OsmprjError::DownloadFailed { url: url.to_string(), message: e.to_string() })?
+        .map_err(|e| OsmprjError::DownloadFailed {
+            url: url.to_string(),
+            message: e.to_string(),
+        })?
     {
-        tokio::io::AsyncWriteExt::write_all(&mut file, &chunk).await.map_err(OsmprjError::Io)?;
+        tokio::io::AsyncWriteExt::write_all(&mut file, &chunk)
+            .await
+            .map_err(OsmprjError::Io)?;
         bar.inc(chunk.len() as u64);
     }
 
@@ -108,7 +122,9 @@ async fn download_source(
 ) -> Result<DownloadResult, (String, OsmprjError)> {
     let err = |e| (source_name.clone(), e);
 
-    download_pbf(&client, &url, &dest, &bar).await.map_err(err)?;
+    download_pbf(&client, &url, &dest, &bar)
+        .await
+        .map_err(err)?;
 
     let remote_md5 = fetch_remote_md5(&client, &url).await.map_err(err)?;
     let local_md5 = file_md5(&dest).await.map_err(err)?;
@@ -129,7 +145,11 @@ async fn download_source(
     Ok(DownloadResult {
         source_name,
         pbf_path: dest,
-        entry: SourceLockEntry { url, md5: local_md5, downloaded_at: Utc::now() },
+        entry: SourceLockEntry {
+            url,
+            md5: local_md5,
+            downloaded_at: Utc::now(),
+        },
     })
 }
 
@@ -158,8 +178,7 @@ async fn run_subprocess(
     verbose: bool,
     spinner: &ProgressBar,
 ) -> Result<(), OsmprjError> {
-    let log_file =
-        std::fs::File::create(log_path).map_err(OsmprjError::Io)?;
+    let log_file = std::fs::File::create(log_path).map_err(OsmprjError::Io)?;
     let log = Arc::new(Mutex::new(log_file));
 
     let cmd_line = argv.join(" ");
@@ -221,13 +240,12 @@ pub async fn run_postprocess(
 ) -> Result<(), OsmprjError> {
     for file_path in sql_files {
         let file_name = file_path.display().to_string();
-        let content = std::fs::read_to_string(file_path).map_err(|e| {
-            OsmprjError::PostProcessFailed {
+        let content =
+            std::fs::read_to_string(file_path).map_err(|e| OsmprjError::PostProcessFailed {
                 source_name: source_name.to_string(),
                 file: file_name.clone(),
                 message: format!("could not read file: {e}"),
-            }
-        })?;
+            })?;
 
         let substituted = content.replace("{schema}", schema);
 
@@ -236,11 +254,14 @@ pub async fn run_postprocess(
             if stmt.is_empty() {
                 continue;
             }
-            client.execute(stmt, &[]).await.map_err(|e| OsmprjError::PostProcessFailed {
-                source_name: source_name.to_string(),
-                file: file_name.clone(),
-                message: e.to_string(),
-            })?;
+            client
+                .execute(stmt, &[])
+                .await
+                .map_err(|e| OsmprjError::PostProcessFailed {
+                    source_name: source_name.to_string(),
+                    file: file_name.clone(),
+                    message: e.to_string(),
+                })?;
         }
     }
     Ok(())
@@ -267,7 +288,11 @@ fn collect_sql_files(source: &SourceConfig, registry: &ThemeRegistry) -> Vec<Pat
         }
     }
 
-    if let Some(extra) = source.postprocess.as_ref().and_then(|pp| pp.extra_sql.as_ref()) {
+    if let Some(extra) = source
+        .postprocess
+        .as_ref()
+        .and_then(|pp| pp.extra_sql.as_ref())
+    {
         for path_str in extra {
             files.push(PathBuf::from(path_str));
         }
@@ -411,13 +436,17 @@ pub async fn run(
             .cloned()
             .collect();
         if !unknown.is_empty() {
-            return Err(OsmprjError::UnknownSources { names: unknown.join(", ") });
+            return Err(OsmprjError::UnknownSources {
+                names: unknown.join(", "),
+            });
         }
     }
 
     for bin in ["osm2pgsql", "osm2pgsql-replication"] {
         if !which(bin) {
-            return Err(OsmprjError::BinaryNotFound { binary: bin.to_string() });
+            return Err(OsmprjError::BinaryNotFound {
+                binary: bin.to_string(),
+            });
         }
     }
 
@@ -430,7 +459,11 @@ pub async fn run(
     let data_dir = config.project.effective_data_dir();
     std::fs::create_dir_all(&data_dir).map_err(OsmprjError::Io)?;
 
-    let db_url = config.project.database_url.as_deref().ok_or(OsmprjError::NoDatabaseUrl)?;
+    let db_url = config
+        .project
+        .database_url
+        .as_deref()
+        .ok_or(OsmprjError::NoDatabaseUrl)?;
 
     let max_diff_size_mb = config.project.max_diff_size_mb;
 
@@ -474,14 +507,15 @@ pub async fn run(
     .unwrap()
     .progress_chars("█▓░");
 
-    let http = Arc::new(
-        reqwest::Client::builder()
-            .build()
-            .map_err(|e| OsmprjError::DownloadFailed {
-                url: String::new(),
-                message: e.to_string(),
-            })?,
-    );
+    let http =
+        Arc::new(
+            reqwest::Client::builder()
+                .build()
+                .map_err(|e| OsmprjError::DownloadFailed {
+                    url: String::new(),
+                    message: e.to_string(),
+                })?,
+        );
 
     let mut set = tokio::task::JoinSet::new();
 
@@ -493,14 +527,21 @@ pub async fn run(
             continue;
         }
         if lock.sources.contains_key(name.as_str()) {
-            println!("  {} {} already downloaded, skipping", style("⊙").dim(), name);
+            println!(
+                "  {} {} already downloaded, skipping",
+                style("⊙").dim(),
+                name
+            );
             continue;
         }
 
         let url = match source_pbf_url(name, config).await {
             Some(u) => u,
             None => {
-                eprintln!("  {} No download URL for source '{name}', skipping", style("!").yellow());
+                eprintln!(
+                    "  {} No download URL for source '{name}', skipping",
+                    style("!").yellow()
+                );
                 continue;
             }
         };
@@ -516,7 +557,8 @@ pub async fn run(
     }
 
     let mut dl_errors: Vec<(String, OsmprjError)> = Vec::new();
-    let mut pbf_paths: std::collections::HashMap<String, PathBuf> = std::collections::HashMap::new();
+    let mut pbf_paths: std::collections::HashMap<String, PathBuf> =
+        std::collections::HashMap::new();
 
     while let Some(result) = set.join_next().await {
         match result.expect("task panicked") {
@@ -567,17 +609,13 @@ pub async fn run(
             if let Some(plugin) = theme_registry.find(theme) {
                 // Plugin theme: themepark type gets a wrapper; flex passes through directly.
                 match plugin.theme_type() {
-                    ThemeType::Themepark => {
-                        Some(plugin.lua_path.clone())
-                    }
-                    ThemeType::Flex => {
-                        Some(plugin.lua_path.clone())
-                    }
+                    ThemeType::Themepark => Some(plugin.lua_path.clone()),
+                    ThemeType::Flex => Some(plugin.lua_path.clone()),
                 }
             } else {
                 return Err(OsmprjError::ThemeNotFound {
                     theme: theme.clone(),
-                })
+                });
             }
         } else {
             None
@@ -587,7 +625,10 @@ pub async fn run(
 
         let env_vars = vec![
             ("OSMPRJ_SCHEMA".to_string(), effective_schema.clone()),
-            ("OSMPRJ_SRID".to_string(), source.effective_srid().to_string()),
+            (
+                "OSMPRJ_SRID".to_string(),
+                source.effective_srid().to_string(),
+            ),
         ];
 
         let spinner = ProgressBar::new_spinner();
@@ -595,12 +636,23 @@ pub async fn run(
         spinner.set_message(format!("Updating {name}..."));
         spinner.enable_steady_tick(std::time::Duration::from_millis(250));
 
-        match replication_update(db_url, &effective_schema, style_path.as_ref(), max_diff_size_mb, &env_vars, &log_path, verbose).await {
+        match replication_update(
+            db_url,
+            &effective_schema,
+            style_path.as_ref(),
+            max_diff_size_mb,
+            &env_vars,
+            &log_path,
+            verbose,
+        )
+        .await
+        {
             Ok(()) => {
                 spinner.finish_with_message(format!("{} {name} updated", style("✓").green()));
             }
             Err(e) => {
-                spinner.finish_with_message(format!("{} {name} update failed", style("⚠").yellow()));
+                spinner
+                    .finish_with_message(format!("{} {name} update failed", style("⚠").yellow()));
                 eprintln!("  {} {name}: {e}", style("⚠").yellow());
                 eprintln!("  Logs: {}", log_path.display());
             }
@@ -609,10 +661,14 @@ pub async fn run(
 
     // ── Phase 3b: Fresh imports ───────────────────────────────────────────────
     if !fresh_sources.is_empty() {
-        let n_to_import = fresh_sources.iter()
+        let n_to_import = fresh_sources
+            .iter()
             .filter(|n| config.sources[**n].path.is_none())
             .count();
-        println!("\n  🗺  {} file(s) ready — starting imports\n", n_to_import.max(pbf_paths.len()));
+        println!(
+            "\n  🗺  {} file(s) ready — starting imports\n",
+            n_to_import.max(pbf_paths.len())
+        );
     }
 
     let mut imported: Vec<String> = Vec::new();
@@ -625,11 +681,18 @@ pub async fn run(
         } else {
             match pbf_paths.get(*name).cloned().or_else(|| {
                 let p = data_dir.join(pbf_filename(name));
-                if p.exists() { Some(p) } else { None }
+                if p.exists() {
+                    Some(p)
+                } else {
+                    None
+                }
             }) {
                 Some(p) => p,
                 None => {
-                    eprintln!("  {} PBF file not found for '{name}', skipping import", style("!").yellow());
+                    eprintln!(
+                        "  {} PBF file not found for '{name}', skipping import",
+                        style("!").yellow()
+                    );
                     continue;
                 }
             }
@@ -645,17 +708,13 @@ pub async fn run(
             if let Some(plugin) = theme_registry.find(theme) {
                 // Plugin theme: themepark type gets a wrapper; flex passes through directly.
                 match plugin.theme_type() {
-                    ThemeType::Themepark => {
-                        Some(plugin.lua_path.clone())
-                    }
-                    ThemeType::Flex => {
-                        Some(plugin.lua_path.clone())
-                    }
+                    ThemeType::Themepark => Some(plugin.lua_path.clone()),
+                    ThemeType::Flex => Some(plugin.lua_path.clone()),
                 }
             } else {
                 return Err(OsmprjError::ThemeNotFound {
                     theme: theme.clone(),
-                })
+                });
             }
         } else {
             None
@@ -678,7 +737,10 @@ pub async fn run(
 
         let env_vars = vec![
             ("OSMPRJ_SCHEMA".to_string(), effective_schema.clone()),
-            ("OSMPRJ_SRID".to_string(), source.effective_srid().to_string()),
+            (
+                "OSMPRJ_SRID".to_string(),
+                source.effective_srid().to_string(),
+            ),
         ];
 
         let spinner = ProgressBar::new_spinner();
@@ -710,9 +772,12 @@ pub async fn run(
                                 let pp_spinner = ProgressBar::new_spinner();
                                 pp_spinner.set_style(spinner_style.clone());
                                 pp_spinner.set_message(format!("Post-processing {name}..."));
-                                pp_spinner.enable_steady_tick(std::time::Duration::from_millis(250));
+                                pp_spinner
+                                    .enable_steady_tick(std::time::Duration::from_millis(250));
 
-                                match run_postprocess(&client, name, &effective_schema, &sql_files).await {
+                                match run_postprocess(&client, name, &effective_schema, &sql_files)
+                                    .await
+                                {
                                     Ok(()) => {
                                         pp_spinner.finish_with_message(format!(
                                             "{} {name} post-processing complete ({} file(s))",
@@ -778,8 +843,8 @@ pub async fn run(
 /// Looks up the PBF download URL for a Geofabrik source from the cached index.
 async fn source_pbf_url(name: &str, config: &ProjectConfig) -> Option<String> {
     let _ = config; // not needed; URL comes from geofabrik index
-    // Load the cached Geofabrik index and look up the URL.
-    // Re-uses the existing geofabrik module.
+                    // Load the cached Geofabrik index and look up the URL.
+                    // Re-uses the existing geofabrik module.
     let features = crate::geofabrik::load_index().await.ok()?;
     let feature = crate::geofabrik::lookup(name, &features)?;
     feature.properties.urls.as_ref()?.pbf.clone()
@@ -805,7 +870,8 @@ mod tests {
         let sql_path = tmp.path().join("01_test.sql");
 
         // Write a SQL file with multiple {schema} placeholders
-        let template = "CREATE INDEX ON {schema}.buildings(way);\nCREATE INDEX ON {schema}.roads(way);";
+        let template =
+            "CREATE INDEX ON {schema}.buildings(way);\nCREATE INDEX ON {schema}.roads(way);";
         fs::write(&sql_path, template).unwrap();
 
         let content = fs::read_to_string(&sql_path).unwrap();
@@ -824,4 +890,3 @@ mod tests {
         assert_eq!(stmts.len(), 2);
     }
 }
-

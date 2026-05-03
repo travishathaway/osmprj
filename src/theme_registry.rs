@@ -131,11 +131,19 @@ impl ThemeRegistry {
                 let lua_path = theme_dir.join(&manifest.entry);
                 let sql_files = Self::collect_sql_files(&theme_dir);
 
-                entries.push(ThemeEntry { manifest, theme_dir, lua_path, sql_files });
+                entries.push(ThemeEntry {
+                    manifest,
+                    theme_dir,
+                    lua_path,
+                    sql_files,
+                });
             }
         }
 
-        ThemeRegistry { entries, searched_paths }
+        ThemeRegistry {
+            entries,
+            searched_paths,
+        }
     }
 
     fn load_manifest(path: &Path) -> Result<ThemeManifest, String> {
@@ -203,8 +211,11 @@ entry = "{name}.lua"
         if with_sql {
             let sql_dir = theme_dir.join("sql");
             fs::create_dir_all(&sql_dir).unwrap();
-            fs::write(sql_dir.join("01_indexes.sql"), "CREATE INDEX ON {schema}.foo(id);")
-                .unwrap();
+            fs::write(
+                sql_dir.join("01_indexes.sql"),
+                "CREATE INDEX ON {schema}.foo(id);",
+            )
+            .unwrap();
         }
     }
 
@@ -224,7 +235,9 @@ entry = "{name}.lua"
 
         std::env::remove_var("OSMPRJ_THEME_PATH");
 
-        let tp = registry.find("tp-theme").expect("themepark theme not found");
+        let tp = registry
+            .find("tp-theme")
+            .expect("themepark theme not found");
         assert_eq!(tp.manifest.theme_type, ThemeType::Themepark);
         assert_eq!(tp.sql_files.len(), 1);
 
@@ -242,8 +255,7 @@ entry = "{name}.lua"
         make_theme(low.path(), "my-theme", "flex", false);
 
         // high comes first → wins
-        let path_val =
-            std::env::join_paths([high.path(), low.path()]).unwrap();
+        let path_val = std::env::join_paths([high.path(), low.path()]).unwrap();
         std::env::set_var("OSMPRJ_THEME_PATH", &path_val);
 
         let registry = ThemeRegistry::build();

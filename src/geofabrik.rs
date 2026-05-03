@@ -37,14 +37,20 @@ pub async fn load_index() -> Result<Vec<GeofabrikFeature>, OsmprjError> {
 
     if path.exists() {
         let content = fs::read_to_string(&path)?;
-        let index: GeofabrikIndex = serde_json::from_str(&content)
-            .map_err(|e| OsmprjError::GeofabrikFetchFailed { message: e.to_string() })?;
+        let index: GeofabrikIndex =
+            serde_json::from_str(&content).map_err(|e| OsmprjError::GeofabrikFetchFailed {
+                message: e.to_string(),
+            })?;
         return Ok(index.features);
     }
 
     eprintln!("Fetching Geofabrik index...");
-    let response = reqwest::get(INDEX_URL).await
-        .map_err(|e| OsmprjError::GeofabrikFetchFailed { message: e.to_string() })?;
+    let response =
+        reqwest::get(INDEX_URL)
+            .await
+            .map_err(|e| OsmprjError::GeofabrikFetchFailed {
+                message: e.to_string(),
+            })?;
 
     if !response.status().is_success() {
         return Err(OsmprjError::GeofabrikFetchFailed {
@@ -55,7 +61,9 @@ pub async fn load_index() -> Result<Vec<GeofabrikFeature>, OsmprjError> {
     let body = response
         .text()
         .await
-        .map_err(|e| OsmprjError::GeofabrikFetchFailed { message: e.to_string() })?;
+        .map_err(|e| OsmprjError::GeofabrikFetchFailed {
+            message: e.to_string(),
+        })?;
 
     if let Some(parent) = path.parent() {
         if !parent.is_dir() {
@@ -65,8 +73,10 @@ pub async fn load_index() -> Result<Vec<GeofabrikFeature>, OsmprjError> {
     }
     fs::write(&path, &body)?;
 
-    let index: GeofabrikIndex = serde_json::from_str(&body)
-        .map_err(|e| OsmprjError::GeofabrikFetchFailed { message: e.to_string() })?;
+    let index: GeofabrikIndex =
+        serde_json::from_str(&body).map_err(|e| OsmprjError::GeofabrikFetchFailed {
+            message: e.to_string(),
+        })?;
     Ok(index.features)
 }
 

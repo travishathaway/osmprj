@@ -3,7 +3,7 @@
 Tuner logic (cache MB, flat-nodes thresholds) is verified by Rust unit tests
 in src/tuner.rs (`cargo test`). The tests here cover CLI-observable behaviour.
 """
-import json
+
 import tomllib
 
 
@@ -36,7 +36,8 @@ def test_sync_unknown_source_exits_before_any_work(run, project):
 
 def test_sync_verbose_flag_accepted(run, project):
     """The -v flag should parse without error (even if sync exits non-zero for
-    other reasons like missing binaries or database)."""
+    other reasons like missing binaries or database).
+    """
     result = run("-v", "sync", cwd=project)
     # Should not fail due to flag parsing; may fail due to missing osm2pgsql
     assert "unrecognized" not in result.stderr.lower()
@@ -44,7 +45,8 @@ def test_sync_verbose_flag_accepted(run, project):
 
 def test_sync_source_filter_accepts_known_source(run, tmp_path):
     """Sync with a known source name should pass validation (may fail later
-    due to missing osm2pgsql binary, but not with UnknownSources error)."""
+    due to missing osm2pgsql binary, but not with UnknownSources error).
+    """
     run("init", cwd=tmp_path)
     run("add", "albania", cwd=tmp_path)
     result = run("sync", "albania", cwd=tmp_path)
@@ -54,15 +56,15 @@ def test_sync_source_filter_accepts_known_source(run, tmp_path):
         assert "unknown source" not in result.stderr.lower()
 
 
-# ── Lock file tests ────────────────────────────────────────────────────────────
-
 def test_lock_not_created_without_sync(run, project):
     assert not (project / "osmprj.lock").exists()
 
 
 def test_lock_skips_source_when_entry_present(run, tmp_path):
-    """If osmprj.lock already has an entry for a source, sync should skip the
-    download for that source (observable: no re-download message)."""
+    """
+    If osmprj.lock already has an entry for a source, sync should skip the
+    download for that source (observable: no re-download message).
+    """
     run("init", cwd=tmp_path)
     run("add", "--path", "/data/region.pbf", "--name", "myregion", cwd=tmp_path)
 

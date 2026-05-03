@@ -1,8 +1,8 @@
 use crate::config::{ProjectConfig, SourceConfig};
+use crate::db;
 use crate::error::OsmprjError;
 use crate::geofabrik;
 use crate::theme_registry::ThemeRegistry;
-use crate::{db};
 use miette::NamedSource;
 use std::fs;
 use std::path::Path;
@@ -38,7 +38,8 @@ pub async fn run(
     }
 
     // Build list of (source_name, pbf_path) pairs to add.
-    let sources_to_add: Vec<(String, Option<String>)> = match (geofabrik_ids.is_empty(), path, name) {
+    let sources_to_add: Vec<(String, Option<String>)> = match (geofabrik_ids.is_empty(), path, name)
+    {
         (false, None, _) => {
             if geofabrik_ids.len() > 1 && schema.is_some() {
                 return Err(OsmprjError::SchemaWithMultipleIds);
@@ -57,13 +58,13 @@ pub async fn run(
     };
 
     let raw = fs::read_to_string("osmprj.toml")?;
-    let mut doc: DocumentMut = raw.parse().map_err(|e: toml_edit::TomlError| {
-        OsmprjError::BadConfig {
-            message: e.to_string(),
-            src: NamedSource::new("osmprj.toml", raw.clone()),
-            span: e.span().map(Into::into),
-        }
-    })?;
+    let mut doc: DocumentMut =
+        raw.parse()
+            .map_err(|e: toml_edit::TomlError| OsmprjError::BadConfig {
+                message: e.to_string(),
+                src: NamedSource::new("osmprj.toml", raw.clone()),
+                span: e.span().map(Into::into),
+            })?;
 
     if !doc.contains_key("sources") {
         doc["sources"] = Item::Table(Table::new());
@@ -80,7 +81,9 @@ pub async fn run(
     // Check for duplicates before making any changes.
     for (source_name, _) in &sources_to_add {
         if sources_table.contains_key(source_name) {
-            return Err(OsmprjError::DuplicateSource { name: source_name.clone() });
+            return Err(OsmprjError::DuplicateSource {
+                name: source_name.clone(),
+            });
         }
     }
 

@@ -10,6 +10,9 @@ Run with:
 Exclude from the default run with:
     pytest -m "not slow"
 """
+
+import subprocess
+
 try:
     import tomllib
 except ImportError:
@@ -18,10 +21,7 @@ except ImportError:
 import psycopg
 import pytest
 
-pytestmark = [
-    pytest.mark.slow,
-    pytest.mark.integration,
-]
+pytestmark = [pytest.mark.slow, pytest.mark.integration]
 
 SOURCE_NAME = "testregion"
 SCHEMA_NAME = "testregion"
@@ -50,8 +50,7 @@ def remove_project(run_cmd, pg_e2e, tmp_path_factory):
 def _schema_exists(db_url: str, schema: str) -> bool:
     with psycopg.connect(db_url) as conn:
         row = conn.execute(
-            "SELECT 1 FROM information_schema.schemata WHERE schema_name = %s",
-            (schema,),
+            "SELECT 1 FROM information_schema.schemata WHERE schema_name = %s", (schema,)
         ).fetchone()
     return row is not None
 
@@ -87,9 +86,11 @@ def geofabrik_project(run_cmd, pg_e2e, tmp_path):
 
     run_cmd("remove", "--force", "monaco", cwd=tmp_path)
 
+
 # ---------------------------------------------------------------------------
 # 5.3 — remove --force removes entry from osmprj.toml
 # ---------------------------------------------------------------------------
+
 
 def test_remove_force_removes_from_toml(isolated_project, run_cmd):
     project = isolated_project["project"]
@@ -101,6 +102,7 @@ def test_remove_force_removes_from_toml(isolated_project, run_cmd):
 # ---------------------------------------------------------------------------
 # 5.4 — remove --force removes entry from osmprj.lock
 # ---------------------------------------------------------------------------
+
 
 def test_remove_force_removes_from_lock(isolated_project, run_cmd):
     project = isolated_project["project"]
@@ -123,17 +125,21 @@ def test_remove_force_removes_from_lock(isolated_project, run_cmd):
 # 5.5 — remove --force drops the PostgreSQL schema
 # ---------------------------------------------------------------------------
 
+
 def test_remove_force_drops_schema(isolated_project, run_cmd):
     project = isolated_project["project"]
     db_url = isolated_project["db_url"]
     assert _schema_exists(db_url, SCHEMA_NAME), "Precondition: schema must exist before remove"
     run_cmd("remove", "--force", SOURCE_NAME, cwd=project)
-    assert not _schema_exists(db_url, SCHEMA_NAME), f"Schema '{SCHEMA_NAME}' still exists after remove"
+    assert not _schema_exists(db_url, SCHEMA_NAME), (
+        f"Schema '{SCHEMA_NAME}' still exists after remove"
+    )
 
 
 # ---------------------------------------------------------------------------
 # 5.6 — remove --dry-run leaves everything unchanged
 # ---------------------------------------------------------------------------
+
 
 def test_dry_run_leaves_toml_unchanged(geofabrik_project, run_cmd):
     project = geofabrik_project["project"]
@@ -163,6 +169,7 @@ def test_dry_run_leaves_schema_intact(geofabrik_project, run_cmd):
 # 5.7 — unknown source exits non-zero without modifying anything
 # ---------------------------------------------------------------------------
 
+
 def test_unknown_source_exits_nonzero(isolated_project, run_cmd):
     project = isolated_project["project"]
     result = run_cmd("remove", "nonexistent", cwd=project, check=False)
@@ -186,9 +193,9 @@ def test_unknown_source_leaves_toml_unchanged(isolated_project, run_cmd):
 # 5.8 — prompt without --force: declining aborts cleanly
 # ---------------------------------------------------------------------------
 
+
 def test_prompt_shown_without_force(isolated_project, binary):
     """Sending newline (default 'N') to stdin should abort without changes."""
-    import subprocess
     project = isolated_project["project"]
     original_toml = (project / "osmprj.toml").read_text()
 
@@ -198,6 +205,7 @@ def test_prompt_shown_without_force(isolated_project, binary):
         input="\n",
         capture_output=True,
         text=True,
+        check=False,
     )
     # Should exit cleanly (code 0 — user declined, not an error).
     assert result.returncode == 0
@@ -208,7 +216,6 @@ def test_prompt_shown_without_force(isolated_project, binary):
 
 def test_prompt_confirms_with_y(isolated_project, binary):
     """Sending 'y' to stdin should proceed and remove the source."""
-    import subprocess
     project = isolated_project["project"]
     db_url = isolated_project["db_url"]
 
@@ -218,6 +225,7 @@ def test_prompt_confirms_with_y(isolated_project, binary):
         input="y\n",
         capture_output=True,
         text=True,
+        check=False,
     )
     assert result.returncode == 0
     config = tomllib.loads((project / "osmprj.toml").read_text())

@@ -83,10 +83,12 @@ impl ProjectConfig {
             Err(e) => return Err(OsmprjError::Io(e)),
         };
 
-        toml::from_str(&content).map(Some).map_err(|e| OsmprjError::BadConfig {
-            message: e.message().to_string(),
-            src: NamedSource::new("osmprj.toml", content),
-            span: e.span().map(Into::into),
-        })
+        toml::from_str(&content)
+            .map(Some)
+            .map_err(|e| OsmprjError::BadConfig {
+                message: e.message().to_string(),
+                src: NamedSource::new("osmprj.toml", content),
+                span: e.span().map(Into::into),
+            })
     }
 }

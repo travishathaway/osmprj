@@ -47,6 +47,7 @@ pre-commit = ">=4.5.1,<5"
 pylint = ">=4.0.4,<5"
 commitizen = ">=4.13.5,<5"
 pg-helper = "*"
+prek = ">=0.3.11,<0.4"
 
 [feature.dev.activation]
 env = { PATH = "$PIXI_PROJECT_ROOT/target/debug:$PATH", OSMPRJ_THEME_PATH = "$PIXI_PROJECT_ROOT/themes" }
@@ -55,4 +56,3 @@ env = { PATH = "$PIXI_PROJECT_ROOT/target/debug:$PATH", OSMPRJ_THEME_PATH = "$PI
 test = "pytest tests"
 test-unit = "pytest tests/unit"
 test-integration = "pytest tests/integration"
-

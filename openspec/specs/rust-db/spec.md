@@ -22,4 +22,3 @@ The system SHALL return a descriptive error when `database_url` is `None` rather
 #### Scenario: No database URL configured
 - **WHEN** `settings.database_url` is `None` and `connect` is called
 - **THEN** `connect(&settings).await` returns an `Err` with a message indicating the database URL is not configured
-

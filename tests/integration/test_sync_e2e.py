@@ -14,19 +14,16 @@ Run with:
 Exclude from the default run with:
     pytest -m "not slow"
 """
+
 import psycopg
 import pytest
 
 SYNC_SOURCES = [
-    pytest.param(("monaco", "monaco", "shortbread"), id="monaco"),
+    pytest.param(("monaco", "monaco", "shortbread"), id="monaco")
     # pytest.param(("liechtenstein", "liechtenstein", "shortbread"), id="liechtenstein"),
 ]
 
-pytestmark = [
-    pytest.mark.slow,
-    pytest.mark.integration,
-    pytest.mark.timeout(300),
-]
+pytestmark = [pytest.mark.slow, pytest.mark.integration, pytest.mark.timeout(300)]
 
 
 @pytest.fixture(scope="session", params=SYNC_SOURCES)
@@ -78,6 +75,7 @@ def source_state(request, run_cmd, pg_e2e, tmp_path_factory):
 
 
 def test_first_sync_imports_source(source_state, pg_e2e):
+    """Ensures that the first sync was successful and created a database that can be updated."""
     assert source_state["first_sync"].returncode == 0, (
         f"First sync failed:\n{source_state['first_sync'].stderr}"
     )
@@ -91,6 +89,7 @@ def test_first_sync_imports_source(source_state, pg_e2e):
 
 
 def test_second_sync_runs_update(source_state):
+    """Ensures that the second sync ran successfully and attempted to update the database."""
     assert source_state["second_sync"].returncode == 0, (
         f"Second sync failed:\n{source_state['second_sync'].stderr}"
     )
@@ -101,6 +100,7 @@ def test_second_sync_runs_update(source_state):
 
 @pytest.mark.xfail(reason="depends on replication server having newer data than the PBF snapshot")
 def test_replication_timestamp_advances(source_state):
+    """Ensure that the replication timestamp updates after each sync run."""
     ts_before = source_state["ts_before"]
     ts_after = source_state["ts_after"]
     assert ts_before is not None, "replication_timestamp not found after first sync"

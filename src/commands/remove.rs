@@ -45,7 +45,9 @@ pub async fn run(
             println!("  schema : {schema}");
             println!();
         }
-        println!("This will drop all database schemas listed above (CASCADE) and cannot be undone.");
+        println!(
+            "This will drop all database schemas listed above (CASCADE) and cannot be undone."
+        );
         print!("Continue? [y/N] ");
         io::stdout().flush()?;
 
@@ -59,13 +61,13 @@ pub async fn run(
 
     // Load config file for toml_edit round-trip.
     let raw = fs::read_to_string("osmprj.toml")?;
-    let mut doc: DocumentMut = raw.parse().map_err(|e: toml_edit::TomlError| {
-        OsmprjError::BadConfig {
-            message: e.to_string(),
-            src: NamedSource::new("osmprj.toml", raw.clone()),
-            span: e.span().map(Into::into),
-        }
-    })?;
+    let mut doc: DocumentMut =
+        raw.parse()
+            .map_err(|e: toml_edit::TomlError| OsmprjError::BadConfig {
+                message: e.to_string(),
+                src: NamedSource::new("osmprj.toml", raw.clone()),
+                span: e.span().map(Into::into),
+            })?;
 
     // Connect to DB once (best-effort).
     let db_client = match config.project.database_url.as_deref() {
@@ -91,9 +93,7 @@ pub async fn run(
 
         // 2. Drop database schema (best-effort).
         if config.project.database_url.is_none() {
-            println!(
-                "  hint: no database_url configured — skipping schema drop for '{schema}'"
-            );
+            println!("  hint: no database_url configured — skipping schema drop for '{schema}'");
         } else if let Some(ref client) = db_client {
             match db::drop_schema(client, schema).await {
                 Ok(()) => println!("  Dropped schema '{schema}'"),

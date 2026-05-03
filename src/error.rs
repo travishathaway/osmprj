@@ -140,7 +140,11 @@ pub enum OsmprjError {
 
     #[error("Post-processing SQL failed for source '{source_name}' (file: {file}): {message}")]
     #[diagnostic(code(osmprj::post_process_failed))]
-    PostProcessFailed { source_name: String, file: String, message: String },
+    PostProcessFailed {
+        source_name: String,
+        file: String,
+        message: String,
+    },
 
     #[error("Download of '{url}' failed: {message}")]
     #[diagnostic(code(osmprj::download_failed))]
@@ -148,7 +152,11 @@ pub enum OsmprjError {
 
     #[error("MD5 verification failed for '{name}': expected {expected}, got {actual}")]
     #[diagnostic(code(osmprj::md5_mismatch))]
-    Md5Mismatch { name: String, expected: String, actual: String },
+    Md5Mismatch {
+        name: String,
+        expected: String,
+        actual: String,
+    },
 
     #[error("Import of '{name}' failed with exit code {code}")]
     #[diagnostic(code(osmprj::import_failed))]

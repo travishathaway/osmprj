@@ -11,7 +11,11 @@ use clap::{Parser, Subcommand};
 use config::ProjectConfig;
 
 #[derive(Parser)]
-#[command(name = "osmprj", about = "OpenStreetMap and PostgreSQL project management tool", version)]
+#[command(
+    name = "osmprj",
+    about = "OpenStreetMap and PostgreSQL project management tool",
+    version
+)]
 struct Cli {
     /// Enable verbose output (stream osm2pgsql logs to terminal)
     #[arg(short = 'v', long, global = true)]
@@ -67,8 +71,6 @@ enum Commands {
         #[arg(short = 'f', long)]
         force: bool,
     },
-    /// Remove all OSM data from the configured database
-    Destroy,
     /// Manage and inspect installed themes
     Themes {
         #[command(subcommand)]
@@ -85,7 +87,12 @@ enum ThemesCommands {
 #[tokio::main]
 async fn main() -> miette::Result<()> {
     miette::set_hook(Box::new(|_| {
-        Box::new(miette::MietteHandlerOpts::new().context_lines(3).tab_width(4).build())
+        Box::new(
+            miette::MietteHandlerOpts::new()
+                .context_lines(3)
+                .tab_width(4)
+                .build(),
+        )
     }))
     .ok();
 
@@ -94,9 +101,14 @@ async fn main() -> miette::Result<()> {
 
     match cli.command {
         Commands::Init { db } => commands::init::run(db),
-        Commands::Add { geofabrik_ids, path, name, theme, schema, srid } => {
-            commands::add::run(geofabrik_ids, path, name, theme, schema, srid).await
-        }
+        Commands::Add {
+            geofabrik_ids,
+            path,
+            name,
+            theme,
+            schema,
+            srid,
+        } => commands::add::run(geofabrik_ids, path, name, theme, schema, srid).await,
         Commands::Status => {
             let config = ProjectConfig::load()?.ok_or(error::OsmprjError::ProjectNotFound)?;
             commands::status::run(&config).await
@@ -105,17 +117,17 @@ async fn main() -> miette::Result<()> {
             let config = ProjectConfig::load()?.ok_or(error::OsmprjError::ProjectNotFound)?;
             commands::sync::run(sources, verbose, &config).await
         }
-        Commands::Remove { sources, dry_run, force } => {
+        Commands::Remove {
+            sources,
+            dry_run,
+            force,
+        } => {
             let config = ProjectConfig::load()?.ok_or(error::OsmprjError::ProjectNotFound)?;
             commands::remove::run(sources, dry_run, force, &config).await
         }
-        Commands::Destroy => {
-            println!("destroy: not yet implemented");
-            Ok(())
-        }
-        Commands::Themes { subcommand: ThemesCommands::List } => {
-            commands::themes::run_list()
-        }
+        Commands::Themes {
+            subcommand: ThemesCommands::List,
+        } => commands::themes::run_list(),
     }
     .map_err(miette::Report::new)?;
 

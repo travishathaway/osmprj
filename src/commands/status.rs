@@ -50,7 +50,10 @@ pub async fn run(config: &ProjectConfig) -> Result<(), crate::error::OsmprjError
         .unwrap_or(0)
         .max(6);
 
-    println!("\n  {:<name_width$}  {:<schema_width$}  status", "source", "schema");
+    println!(
+        "\n  {:<name_width$}  {:<schema_width$}  status",
+        "source", "schema"
+    );
     println!("  {:-<name_width$}  {:-<schema_width$}  ------", "", "");
 
     let mut sorted: Vec<_> = sources.iter().collect();
@@ -77,7 +80,13 @@ fn print_sources_no_db(config: &ProjectConfig) {
         return;
     }
 
-    let name_width = config.sources.keys().map(|k| k.len()).max().unwrap_or(0).max(6);
+    let name_width = config
+        .sources
+        .keys()
+        .map(|k| k.len())
+        .max()
+        .unwrap_or(0)
+        .max(6);
     let schema_width = config
         .sources
         .iter()
@@ -86,7 +95,10 @@ fn print_sources_no_db(config: &ProjectConfig) {
         .unwrap_or(0)
         .max(6);
 
-    println!("\n  {:<name_width$}  {:<schema_width$}  status", "source", "schema");
+    println!(
+        "\n  {:<name_width$}  {:<schema_width$}  status",
+        "source", "schema"
+    );
     println!("  {:-<name_width$}  {:-<schema_width$}  ------", "", "");
 
     let mut sorted: Vec<_> = config.sources.iter().collect();

@@ -1,11 +1,12 @@
 """Integration tests for `osmprj themes list`."""
-import os
 
-import pytest
+import os
+import subprocess
+from pathlib import Path
 
 
 def test_themes_list_exits_zero(run, tmp_path):
-    """osmprj themes list must exit 0 even outside a project directory."""
+    """Osmprj themes list must exit 0 even outside a project directory."""
     result = run("themes", "list", cwd=tmp_path)
     assert result.returncode == 0
 
@@ -34,8 +35,7 @@ def test_themes_list_shows_plugin_theme(run, tmp_path, tmp_path_factory):
     (theme_dir / "my-test-theme.lua").write_text("-- stub flex style\n")
 
     env = {**os.environ, "OSMPRJ_THEME_PATH": str(themes_root)}
-    import subprocess
-    from pathlib import Path
+
     binary = Path(__file__).parents[2] / "target" / "release" / "osmprj"
     result = subprocess.run(
         [str(binary), "themes", "list"],
@@ -43,13 +43,14 @@ def test_themes_list_shows_plugin_theme(run, tmp_path, tmp_path_factory):
         capture_output=True,
         text=True,
         env=env,
+        check=False,
     )
     assert result.returncode == 0
     assert "my-test-theme" in result.stdout + result.stderr
 
 
 def test_themes_list_no_project_required(run, tmp_path):
-    """osmprj themes list must not require osmprj.toml to be present."""
+    """Osmprj themes list must not require osmprj.toml to be present."""
     # tmp_path is a fresh directory with no osmprj.toml
     result = run("themes", "list", cwd=tmp_path)
     assert result.returncode == 0

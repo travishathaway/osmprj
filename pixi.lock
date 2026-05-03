@@ -357,6 +357,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/postgis-3.6.3-hca68158_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/postgresql-18.3-h9d31465_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pre-commit-4.6.0-pyha770c72_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/prek-0.3.11-hb17b654_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/proj-9.8.1-he0df7b0_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/prompt-toolkit-3.0.51-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/prompt_toolkit-3.0.51-hd8ed1ab_0.conda
@@ -517,6 +518,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/postgis-3.6.3-h8050a39_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/postgresql-18.3-ha3e2e0f_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pre-commit-4.6.0-pyha770c72_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/prek-0.3.11-h6fdd925_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/proj-9.8.1-ha88f16d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/prompt-toolkit-3.0.51-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/prompt_toolkit-3.0.51-hd8ed1ab_0.conda
@@ -2941,6 +2943,29 @@ packages:
   license_family: MIT
   size: 201606
   timestamp: 1776858157327
+- conda: https://conda.anaconda.org/conda-forge/linux-64/prek-0.3.11-hb17b654_0.conda
+  sha256: b28ff4fb770ade1eb95d29a92ab9b61bd8bb6eeb8407554e279c5e8d855a34dc
+  md5: 4e3c331fc758ccfad54417539568effd
+  depends:
+  - __glibc >=2.17,<3.0.a0
+  - libgcc >=14
+  constrains:
+  - __glibc >=2.17
+  license: MIT
+  license_family: MIT
+  size: 5892039
+  timestamp: 1777281707472
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/prek-0.3.11-h6fdd925_0.conda
+  sha256: c52e4bbce855829d3649d86dd686e4fb5516fa09db7bfe7b8d9c42f0cb6ec72a
+  md5: aa7d3d4b6dff9006f51afd39070d4130
+  depends:
+  - __osx >=11.0
+  constrains:
+  - __osx >=11.0
+  license: MIT
+  license_family: MIT
+  size: 5417376
+  timestamp: 1777282039762
 - conda: https://conda.anaconda.org/conda-forge/linux-64/proj-9.8.1-he0df7b0_0.conda
   sha256: dff6f355025b9a510d9093e29fd970fa1091e758b848c9dec814d96ae63a09ba
   md5: b23619e5e9009eaa070ead0342034027

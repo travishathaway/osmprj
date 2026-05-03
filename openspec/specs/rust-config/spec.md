@@ -27,4 +27,3 @@ The system SHALL overlay `OSMPRJ_*` environment variables on top of file values,
 #### Scenario: Env var used when no file present
 - **WHEN** `OSMPRJ_DATABASE_URL` is set and no `osmprj.toml` exists
 - **THEN** `Settings::load()` returns a `Settings` with `database_url` set to the env var value
-

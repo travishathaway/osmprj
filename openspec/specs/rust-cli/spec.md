@@ -54,4 +54,3 @@ The system SHALL provide an `osmprj destroy` sub-command.
 #### Scenario: Destroy runs without error
 - **WHEN** the user runs `osmprj destroy`
 - **THEN** the binary prints a "not yet implemented" message and exits with code 0
-

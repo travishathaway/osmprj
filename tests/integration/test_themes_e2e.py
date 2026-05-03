@@ -24,6 +24,7 @@ Run with:
 Exclude from the default run with:
     pytest -m "not slow"
 """
+
 import os
 import subprocess
 from pathlib import Path
@@ -41,22 +42,18 @@ THEMES_DIR = Path(__file__).parents[2] / "themes"
 # The non-standard SRID (3505) exercises the full OSMPRJ_SRID propagation path
 # from ``osmprj add`` through the sync subprocess into the Lua theme config.
 THEME_SOURCES = [
-    pytest.param(("monaco", "pgosm",                    "pgosm",                    3505), id="pgosm"),
-    pytest.param(("monaco", "pgosm_basic",               "pgosm-basic",              3505), id="pgosm-basic"),
-    pytest.param(("monaco", "pgosm_minimal",             "pgosm-minimal",            3505), id="pgosm-minimal"),
-    pytest.param(("monaco", "pgosm_everything",          "pgosm-everything",         3505), id="pgosm-everything"),
-    pytest.param(("monaco", "shortbread",                "shortbread",               3505), id="shortbread"),
-    pytest.param(("monaco", "shortbread_gen",            "shortbread-gen",           3857), id="shortbread-gen"),
-    pytest.param(("monaco", "osmcarto",                  "osmcarto",                 3505), id="osmcarto"),
-    pytest.param(("monaco", "generic",                   "generic",                  3505), id="generic"),
-    pytest.param(("monaco", "nwr",                       "nwr",                      3505), id="nwr"),
+    pytest.param(("monaco", "pgosm", "pgosm", 3505), id="pgosm"),
+    pytest.param(("monaco", "pgosm_basic", "pgosm-basic", 3505), id="pgosm-basic"),
+    pytest.param(("monaco", "pgosm_minimal", "pgosm-minimal", 3505), id="pgosm-minimal"),
+    pytest.param(("monaco", "pgosm_everything", "pgosm-everything", 3505), id="pgosm-everything"),
+    pytest.param(("monaco", "shortbread", "shortbread", 3505), id="shortbread"),
+    pytest.param(("monaco", "shortbread_gen", "shortbread-gen", 3857), id="shortbread-gen"),
+    pytest.param(("monaco", "osmcarto", "osmcarto", 3505), id="osmcarto"),
+    pytest.param(("monaco", "generic", "generic", 3505), id="generic"),
+    pytest.param(("monaco", "nwr", "nwr", 3505), id="nwr"),
 ]
 
-pytestmark = [
-    pytest.mark.slow,
-    pytest.mark.integration,
-    pytest.mark.timeout(300),
-]
+pytestmark = [pytest.mark.slow, pytest.mark.integration, pytest.mark.timeout(300)]
 
 
 @pytest.fixture(scope="session", params=THEME_SOURCES)
@@ -75,11 +72,7 @@ def theme_state(request, binary, pg_e2e, tmp_path_factory):
 
     def _run(*args, cwd, check=True):
         result = subprocess.run(
-            [str(binary), *args],
-            cwd=cwd,
-            capture_output=True,
-            text=True,
-            env=env,
+            [str(binary), *args], cwd=cwd, capture_output=True, text=True, env=env, check=False
         )
         if check:
             assert result.returncode == 0, (
@@ -91,11 +84,7 @@ def theme_state(request, binary, pg_e2e, tmp_path_factory):
     project = tmp_path_factory.mktemp(f"e2e_{theme.replace('-', '_')}")
     _run("init", "--db", pg_e2e, cwd=project)
     _run(
-        "add", geofabrik_id,
-        "--theme", theme,
-        "--schema", schema,
-        "--srid", str(srid),
-        cwd=project,
+        "add", geofabrik_id, "--theme", theme, "--schema", schema, "--srid", str(srid), cwd=project
     )
 
     sync = _run("sync", "--verbose", cwd=project, check=False)
@@ -112,9 +101,7 @@ def theme_state(request, binary, pg_e2e, tmp_path_factory):
             tables = [r[0] for r in rows]
 
             rows = conn.execute(
-                "SELECT DISTINCT srid FROM geometry_columns"
-                " WHERE f_table_schema = %s",
-                (schema,),
+                "SELECT DISTINCT srid FROM geometry_columns WHERE f_table_schema = %s", (schema,)
             ).fetchall()
             geometry_srids = [r[0] for r in rows]
 
@@ -126,15 +113,14 @@ def theme_state(request, binary, pg_e2e, tmp_path_factory):
         "sync": sync,
         "tables": tables,
         "geometry_srids": geometry_srids,
-        "srid": srid
+        "srid": srid,
     }
 
 
 def test_sync_succeeds(theme_state):
     """The sync command must exit 0 for every theme."""
     assert theme_state["sync"].returncode == 0, (
-        f"Sync failed for theme '{theme_state['theme']}':\n"
-        f"{theme_state['sync'].stderr}"
+        f"Sync failed for theme '{theme_state['theme']}':\n{theme_state['sync'].stderr}"
     )
 
 

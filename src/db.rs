@@ -2,12 +2,11 @@ use crate::error::OsmprjError;
 use tokio_postgres::{Client, NoTls};
 
 pub async fn connect(database_url: &str) -> Result<Client, OsmprjError> {
-    let (client, connection) =
-        tokio_postgres::connect(database_url, NoTls).await.map_err(|e| {
-            OsmprjError::DatabaseConnectFailed {
-                message: e.to_string(),
-                url: database_url.to_string(),
-            }
+    let (client, connection) = tokio_postgres::connect(database_url, NoTls)
+        .await
+        .map_err(|e| OsmprjError::DatabaseConnectFailed {
+            message: e.to_string(),
+            url: database_url.to_string(),
         })?;
 
     tokio::spawn(async move {
@@ -26,18 +25,20 @@ pub async fn schema_exists(client: &Client, schema: &str) -> Result<bool, Osmprj
             &[&schema],
         )
         .await
-        .map_err(|e| OsmprjError::DatabaseQueryFailed { message: e.to_string() })?;
+        .map_err(|e| OsmprjError::DatabaseQueryFailed {
+            message: e.to_string(),
+        })?;
     Ok(row.is_some())
 }
 
 pub async fn source_is_updatable(client: &Client, schema: &str) -> Result<bool, OsmprjError> {
-    let sql = format!(
-        "SELECT value FROM \"{schema}\".osm2pgsql_properties WHERE property = 'updatable'"
-    );
-    let row = client
-        .query_opt(sql.as_str(), &[])
-        .await
-        .map_err(|e| OsmprjError::DatabaseQueryFailed { message: e.to_string() })?;
+    let sql =
+        format!("SELECT value FROM \"{schema}\".osm2pgsql_properties WHERE property = 'updatable'");
+    let row = client.query_opt(sql.as_str(), &[]).await.map_err(|e| {
+        OsmprjError::DatabaseQueryFailed {
+            message: e.to_string(),
+        }
+    })?;
     Ok(row.map(|r| r.get::<_, &str>(0) == "true").unwrap_or(false))
 }
 
@@ -49,7 +50,9 @@ pub async fn create_schema(client: &Client, schema: &str) -> Result<(), OsmprjEr
     client
         .execute(sql.as_str(), &[])
         .await
-        .map_err(|e| OsmprjError::DatabaseQueryFailed { message: e.to_string() })?;
+        .map_err(|e| OsmprjError::DatabaseQueryFailed {
+            message: e.to_string(),
+        })?;
     Ok(())
 }
 
@@ -58,6 +61,8 @@ pub async fn drop_schema(client: &Client, schema: &str) -> Result<(), OsmprjErro
     client
         .execute(sql.as_str(), &[])
         .await
-        .map_err(|e| OsmprjError::DatabaseQueryFailed { message: e.to_string() })?;
+        .map_err(|e| OsmprjError::DatabaseQueryFailed {
+            message: e.to_string(),
+        })?;
     Ok(())
 }

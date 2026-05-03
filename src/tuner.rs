@@ -119,9 +119,18 @@ mod tests {
     fn command_always_has_slim_create_no_drop() {
         for (pbf, ram, ssd) in [(0.1, 4.0, true), (20.0, 32.0, true), (50.0, 128.0, false)] {
             let cmd = build_command(&input(pbf, ram, ssd));
-            assert!(cmd.contains(&"--slim".to_string()), "missing --slim for pbf={pbf}");
-            assert!(cmd.contains(&"--create".to_string()), "missing --create for pbf={pbf}");
-            assert!(!cmd.iter().any(|a| a == "--drop"), "--drop present for pbf={pbf}");
+            assert!(
+                cmd.contains(&"--slim".to_string()),
+                "missing --slim for pbf={pbf}"
+            );
+            assert!(
+                cmd.contains(&"--create".to_string()),
+                "missing --create for pbf={pbf}"
+            );
+            assert!(
+                !cmd.iter().any(|a| a == "--drop"),
+                "--drop present for pbf={pbf}"
+            );
         }
     }
 

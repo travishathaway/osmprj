@@ -1,3 +1,10 @@
+"""
+Test suite for the `osmprj add` command.
+
+All of these tests do not require a database connection and should not
+attempt to make a network request.
+"""
+
 try:
     import tomllib
 except ImportError:

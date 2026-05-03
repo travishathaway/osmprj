@@ -1,3 +1,10 @@
+"""
+Holds all fixtures for our test suite.
+
+These are mostly used for making subshell calls and setting up and
+tearing down databases.
+"""
+
 import platform
 import shutil
 import subprocess
@@ -28,12 +35,10 @@ def run_cmd(binary):
     Pass ``check=False`` to suppress the assertion on returncode (e.g. when you
     want to capture a result that may fail and assert on it yourself).
     """
+
     def _run_cmd(*args, cwd, check=True):
         result = subprocess.run(
-            [str(binary), *args],
-            cwd=cwd,
-            capture_output=True,
-            text=True,
+            [str(binary), *args], cwd=cwd, capture_output=True, text=True, check=False
         )
         if check:
             assert result.returncode == 0, (
@@ -51,33 +56,28 @@ def pg_e2e(tmpdir_factory):
 
     # Start server
     subprocess.run(
-        ["pg-helper", "--data-dir", tmp_data_dir, "--port", "65112", "start"],
-        check=True
+        ["pg-helper", "--data-dir", tmp_data_dir, "--port", "65112", "start"], check=True
     )
 
     conn_str = "postgresql://postgres@localhost:65112/postgres"
 
-    # If this errors, tests will fail later so it's okay for
+    # If an error occurs here, will still need to destroy the database afterward.
     try:
         with psycopg.connect(conn_str) as conn:
-            conn.execute(
-                "CREATE EXTENSION IF NOT EXISTS hstore "
-            )
-    except:
-        pass
+            conn.execute("CREATE EXTENSION IF NOT EXISTS hstore ")
 
-    yield conn_str
+        yield conn_str
 
-    # Stop
-    subprocess.run(
-        ["pg-helper", "--data-dir", tmp_data_dir, "--port", "65112", "stop"],
-        check=True
-    )
-    # Destroy
-    subprocess.run(
-        ["pg-helper", "--data-dir", tmp_data_dir, "--port", "65112", "destroy", "--force"],
-        check=True
-    )
+    finally:
+        # Stop
+        subprocess.run(
+            ["pg-helper", "--data-dir", tmp_data_dir, "--port", "65112", "stop"], check=True
+        )
+        # Destroy
+        subprocess.run(
+            ["pg-helper", "--data-dir", tmp_data_dir, "--port", "65112", "destroy", "--force"],
+            check=True,
+        )
 
 
 @pytest.fixture(scope="session")
@@ -92,10 +92,7 @@ def geofabrik_cache_dir(tmp_path_factory):
     (XDG_CACHE_HOME on Linux, HOME on macOS, LOCALAPPDATA on Windows).
     """
     root = tmp_path_factory.mktemp("geofabrik_cache")
-    if platform.system() == "Darwin":
-        cache_subdir = root / "Library" / "Caches"
-    else:
-        cache_subdir = root
+    cache_subdir = root / "Library" / "Caches" if platform.system() == "Darwin" else root
     osmprj_dir = cache_subdir / "osmprj"
     osmprj_dir.mkdir(parents=True)
     shutil.copy(DATA_DIR / "geofabrik-index-v1.json", osmprj_dir / "geofabrik-index-v1.json")
@@ -114,10 +111,7 @@ def run(binary, tmp_path, geofabrik_cache_dir, monkeypatch):
 
     def _run(*args, cwd=None):
         return subprocess.run(
-            [str(binary), *args],
-            cwd=cwd or tmp_path,
-            capture_output=True,
-            text=True,
+            [str(binary), *args], cwd=cwd or tmp_path, capture_output=True, text=True, check=False
         )
 
     return _run

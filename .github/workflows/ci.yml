@@ -4,6 +4,13 @@ on:
   pull_request:
 
 jobs:
+  pre-commit:
+    name: Pre-commit / prek
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: j178/prek-action@v2
+
   test:
     name: Tests / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -27,4 +34,4 @@ jobs:
         run: pixi run --environment dev pytest -m "not slow"
 
       - name: Slow end-to-end tests
-        run: pixi run --environment dev pytest tests/integration/test_sync_e2e.py -m slow -v
+        run: pixi run --environment dev pytest -m slow -v
