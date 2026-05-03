@@ -3,7 +3,7 @@ name = "osmprj"
 version = "0.1.0"
 description = "OpenStreetMap and PostgreSQL project management tool"
 channels = ["gis-forge", "https://prefix.dev/thath", "conda-forge"]
-platforms = ["linux-64", "osx-arm64"] #  "osx-64", "linux-64", "win-64"]
+platforms = ["linux-64", "osx-arm64"] #  "osx-64", "win-64"]
 
 [environments]
 default = { solve-group = "default" }
@@ -21,9 +21,11 @@ tomli = ">=2.0.1" #; python_version<'3.11'",
 postgresql = ">=18"
 osmium-tool = "*"
 osm2pgsql = ">=2"
-osm2pgsql-themepark = "*"
 platformdirs = ">=4.9.2,<5"
 postgis = ">=3.6.3,<4"
+luarocks = ">=3.13.0,<4"
+osm2pgsql-themepark = "*"
+pgosm-themepark = "*"
 
 [feature.rust.dependencies]
 rust = ">=1.80"
@@ -32,6 +34,7 @@ rust = ">=1.80"
 release = "cargo build --release"
 
 [feature.dev.dependencies]
+psycopg = ">=3.1"
 coverage = ">=7.13.1"
 pytest = ">=7.0"
 pytest-timeout = ">=2.1"
@@ -46,7 +49,7 @@ commitizen = ">=4.13.5,<5"
 pg-helper = "*"
 
 [feature.dev.activation]
-env = { PATH = "$PIXI_PROJECT_ROOT/target/debug:$PATH" }
+env = { PATH = "$PIXI_PROJECT_ROOT/target/debug:$PATH", OSMPRJ_THEME_PATH = "$PIXI_PROJECT_ROOT/themes" }
 
 [feature.dev.tasks]
 test = "pytest tests"

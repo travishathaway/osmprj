@@ -1,0 +1,5 @@
+name        = "osmcarto"
+version     = "0.1.0"
+description = "OSM Carto theme"
+type        = "themepark"
+entry       = "config.lua"

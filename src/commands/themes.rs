@@ -1,6 +1,5 @@
 use crate::error::OsmprjError;
 use crate::theme_registry::{ThemeRegistry, ThemeType};
-use crate::themepark;
 use console::style;
 
 pub fn run_list() -> Result<(), OsmprjError> {
@@ -48,10 +47,6 @@ pub fn run_list() -> Result<(), OsmprjError> {
             println!();
         }
     }
-
-    println!("  {}", style("BUILT-IN (themepark)").bold());
-    println!("  {}", themepark::builtin_theme_names().join(", "));
-    println!();
 
     Ok(())
 }

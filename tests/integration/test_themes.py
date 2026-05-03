@@ -14,7 +14,7 @@ def test_themes_list_shows_builtin_themes(run, tmp_path):
     """The output must include the known built-in themepark theme names."""
     result = run("themes", "list", cwd=tmp_path)
     combined = result.stdout + result.stderr
-    for name in ("shortbread_v1", "basic", "osmcarto"):
+    for name in ("shortbread", "basic", "osmcarto"):
         assert name in combined, f"Expected built-in theme '{name}' in output"
 
 

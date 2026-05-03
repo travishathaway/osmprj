@@ -2,7 +2,7 @@ use crate::config::{ProjectConfig, SourceConfig};
 use crate::error::OsmprjError;
 use crate::geofabrik;
 use crate::theme_registry::ThemeRegistry;
-use crate::{db, themepark};
+use crate::{db};
 use miette::NamedSource;
 use std::fs;
 use std::path::Path;
@@ -14,6 +14,7 @@ pub async fn run(
     name: Option<String>,
     theme: Option<String>,
     schema: Option<String>,
+    srid: Option<u32>,
 ) -> Result<(), OsmprjError> {
     if !Path::new("osmprj.toml").exists() {
         return Err(OsmprjError::ProjectNotFound);
@@ -22,7 +23,7 @@ pub async fn run(
     // Validate the theme exists (plugin registry or built-in) before writing anything.
     if let Some(ref theme_name) = theme {
         let registry = ThemeRegistry::build();
-        if registry.find(theme_name).is_none() && !themepark::is_builtin_theme(theme_name) {
+        if registry.find(theme_name).is_none() {
             let paths_formatted = registry
                 .searched_paths()
                 .iter()
@@ -98,6 +99,9 @@ pub async fn run(
             inline.insert("theme", Value::from(t.clone()));
         }
         inline.insert("schema", Value::from(effective_schema));
+        if let Some(s) = srid {
+            inline.insert("srid", Value::from(i64::from(s)));
+        }
 
         sources_table.insert(source_name, Item::Value(Value::InlineTable(inline)));
     }

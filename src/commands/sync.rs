@@ -1,9 +1,8 @@
 use crate::config::{ProjectConfig, SourceConfig};
-use tempfile::NamedTempFile;
 use crate::error::OsmprjError;
 use crate::lock::{LockFile, SourceLockEntry};
 use crate::theme_registry::{ThemeRegistry, ThemeType};
-use crate::{db, themepark, tuner};
+use crate::{db, tuner};
 use chrono::Utc;
 use console::style;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
@@ -154,6 +153,7 @@ async fn pipe_to_log(
 
 async fn run_subprocess(
     argv: &[String],
+    env_vars: &[(String, String)],
     log_path: &Path,
     verbose: bool,
     spinner: &ProgressBar,
@@ -170,8 +170,12 @@ async fn run_subprocess(
         let _ = writeln!(f, "[command] {cmd_line}");
     }
 
-    let mut child = tokio::process::Command::new(&argv[0])
-        .args(&argv[1..])
+    let mut cmd = tokio::process::Command::new(&argv[0]);
+    cmd.args(&argv[1..]);
+    for (k, v) in env_vars {
+        cmd.env(k, v);
+    }
+    let mut child = cmd
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -323,8 +327,9 @@ async fn replication_init(
 async fn replication_update(
     database_url: &str,
     schema: &str,
-    style_path: &Path,
+    style_path: Option<&PathBuf>,
     max_diff_size_mb: Option<u32>,
+    env_vars: &[(String, String)],
     log_path: &Path,
     verbose: bool,
 ) -> Result<(), OsmprjError> {
@@ -346,7 +351,10 @@ async fn replication_update(
     args.push("--".into());
     args.push("--slim".into());
     args.push("--output=flex".into());
-    args.push(format!("--style={}", style_path.display()));
+
+    if let Some(style_path) = style_path {
+        args.push(format!("--style={}", style_path.display()));
+    }
 
     let cmd_line = args.join(" ");
     if verbose {
@@ -356,8 +364,12 @@ async fn replication_update(
         let _ = writeln!(f, "[command] {cmd_line}");
     }
 
-    let mut child = tokio::process::Command::new(&args[0])
-        .args(&args[1..])
+    let mut cmd = tokio::process::Command::new(&args[0]);
+    cmd.args(&args[1..]);
+    for (k, v) in env_vars {
+        cmd.env(k, v);
+    }
+    let mut child = cmd
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -418,7 +430,8 @@ pub async fn run(
     let data_dir = config.project.effective_data_dir();
     std::fs::create_dir_all(&data_dir).map_err(OsmprjError::Io)?;
 
-    let db_url = config.project.database_url.as_deref().unwrap_or("");
+    let db_url = config.project.database_url.as_deref().ok_or(OsmprjError::NoDatabaseUrl)?;
+
     let max_diff_size_mb = config.project.max_diff_size_mb;
 
     // ── Classify sources: update vs fresh ────────────────────────────────────
@@ -530,16 +543,6 @@ pub async fn run(
     // ── Phase 2: Resolve shared resources ────────────────────────────────────
     // Build the plugin theme registry once for all sources.
     let theme_registry = ThemeRegistry::build();
-    // Only look up the built-in themepark root if at least one source uses a
-    // theme that is NOT in the plugin registry (i.e. a built-in theme).
-    let needs_builtin_themepark = sources_to_sync.iter().any(|(_, s)| {
-        s.theme.as_deref().map(|t| theme_registry.find(t).is_none()).unwrap_or(false)
-    });
-    let themepark_root = if needs_builtin_themepark {
-        Some(themepark::find_root()?)
-    } else {
-        None
-    };
 
     let log_dir = config.project.effective_log_dir();
     std::fs::create_dir_all(&log_dir).map_err(OsmprjError::Io)?;
@@ -560,49 +563,39 @@ pub async fn run(
         let source = &config.sources[*name];
         let effective_schema = source.effective_schema(name);
 
-        let _tempfile_guard;
-        let style_path: PathBuf = if let Some(ref theme) = source.theme {
+        let style_path: Option<PathBuf> = if let Some(ref theme) = source.theme {
             if let Some(plugin) = theme_registry.find(theme) {
                 // Plugin theme: themepark type gets a wrapper; flex passes through directly.
                 match plugin.theme_type() {
                     ThemeType::Themepark => {
-                        let tmp = themepark::generate_lua_wrapper_for_plugin(
-                            plugin,
-                            source.topics.as_ref(),
-                            &effective_schema,
-                        )?;
-                        let path = tmp.path().to_path_buf();
-                        _tempfile_guard = tmp;
-                        path
+                        Some(plugin.lua_path.clone())
                     }
                     ThemeType::Flex => {
-                        // Flex: pass the entry Lua file directly — no wrapper needed.
-                        _tempfile_guard = NamedTempFile::new().map_err(OsmprjError::Io)?;
-                        plugin.lua_path.clone()
+                        Some(plugin.lua_path.clone())
                     }
                 }
             } else {
-                // Fall back to built-in themepark resolution.
-                let root = themepark_root.as_ref().unwrap();
-                let base = themepark::resolve_config_file(root, theme)?;
-                let tmp = themepark::generate_lua_wrapper(root, &base, source.topics.as_ref(), &effective_schema)?;
-                let path = tmp.path().to_path_buf();
-                _tempfile_guard = tmp;
-                path
+                return Err(OsmprjError::ThemeNotFound {
+                    theme: theme.clone(),
+                })
             }
         } else {
-            _tempfile_guard = NamedTempFile::new().map_err(OsmprjError::Io)?;
-            PathBuf::from("/dev/null")
+            None
         };
 
         let log_path = log_dir.join(format!("{}-update.log", name.replace('/', "-")));
+
+        let env_vars = vec![
+            ("OSMPRJ_SCHEMA".to_string(), effective_schema.clone()),
+            ("OSMPRJ_SRID".to_string(), source.effective_srid().to_string()),
+        ];
 
         let spinner = ProgressBar::new_spinner();
         spinner.set_style(spinner_style.clone());
         spinner.set_message(format!("Updating {name}..."));
         spinner.enable_steady_tick(std::time::Duration::from_millis(250));
 
-        match replication_update(db_url, &effective_schema, &style_path, max_diff_size_mb, &log_path, verbose).await {
+        match replication_update(db_url, &effective_schema, style_path.as_ref(), max_diff_size_mb, &env_vars, &log_path, verbose).await {
             Ok(()) => {
                 spinner.finish_with_message(format!("{} {name} updated", style("✓").green()));
             }
@@ -648,39 +641,24 @@ pub async fn run(
 
         let effective_schema = source.effective_schema(name);
 
-        let _tempfile_guard;
-        let style_path: PathBuf = if let Some(ref theme) = source.theme {
+        let style_path: Option<PathBuf> = if let Some(ref theme) = source.theme {
             if let Some(plugin) = theme_registry.find(theme) {
                 // Plugin theme: themepark type gets a wrapper; flex passes through directly.
                 match plugin.theme_type() {
                     ThemeType::Themepark => {
-                        let tmp = themepark::generate_lua_wrapper_for_plugin(
-                            plugin,
-                            source.topics.as_ref(),
-                            &effective_schema,
-                        )?;
-                        let path = tmp.path().to_path_buf();
-                        _tempfile_guard = tmp;
-                        path
+                        Some(plugin.lua_path.clone())
                     }
                     ThemeType::Flex => {
-                        // Flex: pass the entry Lua file directly — no wrapper needed.
-                        _tempfile_guard = NamedTempFile::new().map_err(OsmprjError::Io)?;
-                        plugin.lua_path.clone()
+                        Some(plugin.lua_path.clone())
                     }
                 }
             } else {
-                // Fall back to built-in themepark resolution.
-                let root = themepark_root.as_ref().unwrap();
-                let base = themepark::resolve_config_file(root, theme)?;
-                let tmp = themepark::generate_lua_wrapper(root, &base, source.topics.as_ref(), &effective_schema)?;
-                let path = tmp.path().to_path_buf();
-                _tempfile_guard = tmp;
-                path
+                return Err(OsmprjError::ThemeNotFound {
+                    theme: theme.clone(),
+                })
             }
         } else {
-            _tempfile_guard = NamedTempFile::new().map_err(OsmprjError::Io)?;
-            PathBuf::from("/dev/null")
+            None
         };
 
         let tuner_input = tuner::TunerInput {
@@ -698,12 +676,17 @@ pub async fn run(
 
         let log_path = log_dir.join(format!("{}.log", name.replace('/', "-")));
 
+        let env_vars = vec![
+            ("OSMPRJ_SCHEMA".to_string(), effective_schema.clone()),
+            ("OSMPRJ_SRID".to_string(), source.effective_srid().to_string()),
+        ];
+
         let spinner = ProgressBar::new_spinner();
         spinner.set_style(spinner_style.clone());
         spinner.set_message(format!("Importing {name}..."));
         spinner.enable_steady_tick(std::time::Duration::from_millis(250));
 
-        match run_subprocess(&argv, &log_path, verbose, &spinner).await {
+        match run_subprocess(&argv, &env_vars, &log_path, verbose, &spinner).await {
             Ok(()) => {
                 spinner.finish_with_message(format!("{} {name} imported", style("✓").green()));
 

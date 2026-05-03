@@ -61,9 +61,9 @@ def test_explicit_schema_overrides_default(run, project):
 
 
 def test_theme_written_when_provided(run, project):
-    run("add", "--path", "/data/region.pbf", "--name", "myregion", "--theme", "shortbread_v1", cwd=project)
+    run("add", "--path", "/data/region.pbf", "--name", "myregion", "--theme", "shortbread", cwd=project)
     config = tomllib.loads((project / "osmprj.toml").read_text())
-    assert config["sources"]["myregion"]["theme"] == "shortbread_v1"
+    assert config["sources"]["myregion"]["theme"] == "shortbread"
 
 
 def test_no_theme_key_when_omitted(run, project):
@@ -190,7 +190,7 @@ def test_add_builtin_theme_succeeds(run, project):
     """A built-in themepark theme name must be accepted without error."""
     result = run(
         "add", "--path", "/data/region.pbf", "--name", "myregion",
-        "--theme", "shortbread_v1",
+        "--theme", "shortbread",
         cwd=project,
     )
     assert result.returncode == 0

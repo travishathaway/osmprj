@@ -123,13 +123,6 @@ pub enum OsmprjError {
     )]
     BinaryNotFound { binary: String },
 
-    #[error("osm2pgsql-themepark is not installed (THEMEPARK_PATH is not set or does not exist)")]
-    #[diagnostic(
-        code(osmprj::themepark_not_found),
-        help("Install osm2pgsql-themepark and ensure THEMEPARK_PATH points to its root directory")
-    )]
-    ThemeparkNotFound,
-
     #[error("Theme '{theme}' not found in osm2pgsql-themepark config directory")]
     #[diagnostic(
         code(osmprj::theme_not_found),

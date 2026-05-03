@@ -8,7 +8,7 @@ pub struct TunerInput {
     pub database_url: String,
     pub effective_schema: String,
     pub pbf_path: PathBuf,
-    pub style_path: PathBuf,
+    pub style_path: Option<PathBuf>,
     pub data_dir: PathBuf,
     pub source_name: String,
 }
@@ -46,8 +46,11 @@ pub fn build_command(input: &TunerInput) -> Vec<String> {
         args.push(format!("--cache={cache}"));
     }
 
-    args.push("--output=flex".to_string());
-    args.push(format!("--style={}", input.style_path.display()));
+    if let Some(style_path) = &input.style_path {
+        args.push("--output=flex".to_string());
+        args.push(format!("--style={}", style_path.display()));
+    }
+
     args.push(format!("--database={}", input.database_url));
     args.push(format!("--schema={}", input.effective_schema));
     args.push(input.pbf_path.display().to_string());
@@ -68,7 +71,7 @@ mod tests {
             database_url: "postgres://localhost/osm".to_string(),
             effective_schema: "albania".to_string(),
             pbf_path: PathBuf::from("/data/albania.osm.pbf"),
-            style_path: PathBuf::from("/tmp/style.lua"),
+            style_path: Some(PathBuf::from("/tmp/style.lua")),
             data_dir: PathBuf::from("/data"),
             source_name: "albania".to_string(),
         }

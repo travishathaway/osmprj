@@ -1,0 +1,5 @@
+name        = "pgosm-everything"
+version     = "0.1.0"
+description = "PgOSM Flex theme: everything variation"
+type        = "themepark"
+entry       = "config.lua"

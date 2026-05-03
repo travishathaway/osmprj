@@ -5,7 +5,6 @@ mod error;
 mod geofabrik;
 mod lock;
 mod theme_registry;
-mod themepark;
 mod tuner;
 
 use clap::{Parser, Subcommand};
@@ -46,6 +45,9 @@ enum Commands {
         /// PostgreSQL schema name (defaults to normalized source name; cannot be used with multiple IDs)
         #[arg(long)]
         schema: Option<String>,
+        /// Spatial reference ID (default: 3857)
+        #[arg(long)]
+        srid: Option<u32>,
     },
     /// Show project and database status
     Status,
@@ -92,8 +94,8 @@ async fn main() -> miette::Result<()> {
 
     match cli.command {
         Commands::Init { db } => commands::init::run(db),
-        Commands::Add { geofabrik_ids, path, name, theme, schema } => {
-            commands::add::run(geofabrik_ids, path, name, theme, schema).await
+        Commands::Add { geofabrik_ids, path, name, theme, schema, srid } => {
+            commands::add::run(geofabrik_ids, path, name, theme, schema, srid).await
         }
         Commands::Status => {
             let config = ProjectConfig::load()?.ok_or(error::OsmprjError::ProjectNotFound)?;

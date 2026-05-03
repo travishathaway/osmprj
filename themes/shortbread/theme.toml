@@ -1,0 +1,5 @@
+name        = "shortbread"
+version     = "0.1.0"
+description = "Shortbread theme"
+type        = "themepark"
+entry       = "config.lua"
