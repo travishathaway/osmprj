@@ -50,8 +50,8 @@ The typical workflow is: initialise a project, add one or more data sources, the
 # 1. Create a project file in the current directory
 osmprj init --db "postgres://user:pass@localhost/osm"
 
-# 2. Add a Geofabrik region (uses shortbread_v1 theme)
-osmprj add germany --theme shortbread_v1
+# 2. Add a Geofabrik region (uses shortbread theme)
+osmprj add germany --theme shortbread
 
 # 3. Check what will be synced
 osmprj status
@@ -108,13 +108,13 @@ Pass one or more region IDs (the path component from [download.geofabrik.de](htt
 
 ```bash
 # Single region
-osmprj add germany --theme shortbread_v1
+osmprj add germany --theme shortbread
 
 # Multiple regions at once (schema names are auto-derived)
-osmprj add europe/france europe/spain --theme shortbread_v1
+osmprj add europe/france europe/spain --theme shortbread
 
 # Override the schema name (only valid for a single ID)
-osmprj add europe/france --theme shortbread_v1 --schema france
+osmprj add europe/france --theme shortbread --schema france
 ```
 
 **Adding a local PBF file**
@@ -286,11 +286,11 @@ max_diff_size_mb = 500
 
 # Sources are added by `osmprj add` but can also be edited by hand.
 [sources.germany]
-theme = "shortbread_v1"
+theme = "shortbread"
 schema = "germany"
 
 [sources."europe/france"]
-theme = "shortbread_v1_gen"
+theme = "shortbread-gen"
 schema = "france"
 
 [sources.local-extract]
@@ -329,6 +329,9 @@ For non-trivial changes, opening an issue first to discuss the approach is encou
 ```bash
 git clone https://github.com/travishathaway/osmprj
 cd osmprj
+
+# Start a pixi shell
+pixi shell -e dev
 
 # Build
 cargo build
