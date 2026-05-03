@@ -1,0 +1,5 @@
+name        = "nwr"
+version     = "0.1.0"
+description = "Node/Way/Relation (NWR) topic theme"
+type        = "themepark"
+entry       = "config.lua"

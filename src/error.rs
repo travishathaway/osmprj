@@ -123,19 +123,24 @@ pub enum OsmprjError {
     )]
     BinaryNotFound { binary: String },
 
-    #[error("osm2pgsql-themepark is not installed (THEMEPARK_PATH is not set or does not exist)")]
-    #[diagnostic(
-        code(osmprj::themepark_not_found),
-        help("Install osm2pgsql-themepark and ensure THEMEPARK_PATH points to its root directory")
-    )]
-    ThemeparkNotFound,
-
     #[error("Theme '{theme}' not found in osm2pgsql-themepark config directory")]
     #[diagnostic(
         code(osmprj::theme_not_found),
         help("Check available themes in the themepark config/ directory")
     )]
     ThemeNotFound { theme: String },
+
+    #[error("Plugin theme '{name}' not found\n\n  osmprj searched:\n{searched_paths}\n\n  Install a theme package or set OSMPRJ_THEME_PATH.")]
+    #[diagnostic(code(osmprj::plugin_theme_not_found))]
+    PluginThemeNotFound {
+        name: String,
+        /// Pre-formatted list of paths for display (one indented path per line).
+        searched_paths: String,
+    },
+
+    #[error("Post-processing SQL failed for source '{source_name}' (file: {file}): {message}")]
+    #[diagnostic(code(osmprj::post_process_failed))]
+    PostProcessFailed { source_name: String, file: String, message: String },
 
     #[error("Download of '{url}' failed: {message}")]
     #[diagnostic(code(osmprj::download_failed))]

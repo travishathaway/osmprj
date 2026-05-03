@@ -1,0 +1,5 @@
+name        = "generic"
+version     = "0.1.0"
+description = "Generic basic topics theme"
+type        = "themepark"
+entry       = "config.lua"

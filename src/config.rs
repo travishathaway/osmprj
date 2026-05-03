@@ -6,10 +6,11 @@ use std::fs;
 use std::path::PathBuf;
 
 #[derive(Debug, Default, Deserialize)]
-pub struct TopicsConfig {
-    pub list: Option<Vec<String>>,
-    pub add: Option<Vec<String>>,
-    pub remove: Option<Vec<String>>,
+pub struct PostProcessConfig {
+    /// Whether to run the theme's bundled SQL files after import (default: true).
+    pub include_theme_sql: Option<bool>,
+    /// Additional SQL file paths (relative to osmprj.toml) to run after import.
+    pub extra_sql: Option<Vec<String>>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -17,7 +18,8 @@ pub struct SourceConfig {
     pub path: Option<String>,
     pub theme: Option<String>,
     pub schema: Option<String>,
-    pub topics: Option<TopicsConfig>,
+    pub srid: Option<u32>,
+    pub postprocess: Option<PostProcessConfig>,
 }
 
 impl SourceConfig {
@@ -25,6 +27,10 @@ impl SourceConfig {
         self.schema
             .clone()
             .unwrap_or_else(|| name.replace(['/', '-'], "_"))
+    }
+
+    pub fn effective_srid(&self) -> u32 {
+        self.srid.unwrap_or(3857)
     }
 }
 

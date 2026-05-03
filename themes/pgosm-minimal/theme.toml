@@ -1,0 +1,5 @@
+name        = "pgosm-minimal"
+version     = "0.1.0"
+description = "PgOSM Flex theme: minimal variation"
+type        = "themepark"
+entry       = "config.lua"

@@ -61,9 +61,9 @@ def test_explicit_schema_overrides_default(run, project):
 
 
 def test_theme_written_when_provided(run, project):
-    run("add", "--path", "/data/region.pbf", "--name", "myregion", "--theme", "shortbread_v1", cwd=project)
+    run("add", "--path", "/data/region.pbf", "--name", "myregion", "--theme", "shortbread", cwd=project)
     config = tomllib.loads((project / "osmprj.toml").read_text())
-    assert config["sources"]["myregion"]["theme"] == "shortbread_v1"
+    assert config["sources"]["myregion"]["theme"] == "shortbread"
 
 
 def test_no_theme_key_when_omitted(run, project):
@@ -149,3 +149,48 @@ def test_add_unknown_geofabrik_id_fails(run, project):
 def test_add_unknown_geofabrik_id_error_mentions_id(run, project):
     result = run("add", "not-a-real-region-xyzzy", cwd=project)
     assert "not-a-real-region-xyzzy" in result.stderr
+
+
+# --- theme validation ---
+
+
+def test_add_nonexistent_plugin_theme_fails(run, project):
+    """osmprj add with an unrecognised theme name must exit non-zero."""
+    result = run(
+        "add", "--path", "/data/region.pbf", "--name", "myregion",
+        "--theme", "nonexistent-theme-xyzzy",
+        cwd=project,
+    )
+    assert result.returncode != 0
+
+
+def test_add_nonexistent_plugin_theme_error_mentions_name(run, project):
+    """The error message must mention the theme name."""
+    result = run(
+        "add", "--path", "/data/region.pbf", "--name", "myregion",
+        "--theme", "nonexistent-theme-xyzzy",
+        cwd=project,
+    )
+    assert "nonexistent-theme-xyzzy" in result.stderr
+
+
+def test_add_nonexistent_plugin_theme_error_mentions_searched_path(run, project):
+    """The error message must mention at least one searched path."""
+    result = run(
+        "add", "--path", "/data/region.pbf", "--name", "myregion",
+        "--theme", "nonexistent-theme-xyzzy",
+        cwd=project,
+    )
+    # The error should list at least one filesystem path that was searched.
+    combined = result.stdout + result.stderr
+    assert "share" in combined or "osmprj" in combined
+
+
+def test_add_builtin_theme_succeeds(run, project):
+    """A built-in themepark theme name must be accepted without error."""
+    result = run(
+        "add", "--path", "/data/region.pbf", "--name", "myregion",
+        "--theme", "shortbread",
+        cwd=project,
+    )
+    assert result.returncode == 0

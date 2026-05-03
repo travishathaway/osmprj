@@ -3,6 +3,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import psycopg
 import pytest
 
 BINARY = Path(__file__).parents[2] / "target" / "release" / "osmprj"
@@ -54,7 +55,18 @@ def pg_e2e(tmpdir_factory):
         check=True
     )
 
-    yield "postgresql://postgres@localhost:65112/postgres"
+    conn_str = "postgresql://postgres@localhost:65112/postgres"
+
+    # If this errors, tests will fail later so it's okay for
+    try:
+        with psycopg.connect(conn_str) as conn:
+            conn.execute(
+                "CREATE EXTENSION IF NOT EXISTS hstore "
+            )
+    except:
+        pass
+
+    yield conn_str
 
     # Stop
     subprocess.run(
