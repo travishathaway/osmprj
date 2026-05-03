@@ -37,10 +37,6 @@ pub struct ThemeEntry {
 }
 
 impl ThemeEntry {
-    pub fn name(&self) -> &str {
-        &self.manifest.name
-    }
-
     pub fn theme_type(&self) -> &ThemeType {
         &self.manifest.theme_type
     }
