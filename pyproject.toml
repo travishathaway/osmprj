@@ -1,6 +1,8 @@
+# Only for configuring pytest and ruff
+
 [tool.pytest.ini_options]
 minversion = "7.0"
-testpaths = ["tests/unit", "tests/integration"]
+testpaths = ["tests/integration"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -11,15 +13,6 @@ markers = [
 ]
 addopts = "--color=yes --doctest-modules --exitfirst --failed-first --verbosity=2 --junitxml=reports/pytest.xml"
 xfail_strict = true
-
-[tool.mypy]  # https://mypy.readthedocs.io/en/latest/config_file.html
-junit_xml = "reports/mypy.xml"
-ignore_missing_imports = true
-pretty = true
-show_column_numbers = true
-show_error_codes = true
-show_error_context = true
-warn_unreachable = true
 
 [tool.ruff]  # https://docs.astral.sh/ruff/settings/
 fix = true

@@ -1,11 +1,12 @@
 use crate::config::{ProjectConfig, SourceConfig};
 use crate::error::OsmprjError;
 use crate::lock::{LockFile, SourceLockEntry};
+use crate::output;
 use crate::theme_registry::{ThemeRegistry, ThemeType};
 use crate::{db, tuner};
 use chrono::Utc;
 use console::style;
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use indicatif::{MultiProgress, ProgressBar};
 use md5::{Digest, Md5};
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
@@ -501,11 +502,7 @@ pub async fn run(
 
     // ── Phase 1: Downloads (fresh sources only) ───────────────────────────────
     let mp = MultiProgress::new();
-    let bar_style = ProgressStyle::with_template(
-        "  {spinner:.cyan} {msg:<35} [{bar:40.green/white}] {bytes}/{total_bytes} ({bytes_per_sec}, eta {eta})",
-    )
-    .unwrap()
-    .progress_chars("█▓░");
+    let bar_style = output::progress_bar_style();
 
     let http =
         Arc::new(
@@ -529,7 +526,7 @@ pub async fn run(
         if lock.sources.contains_key(name.as_str()) {
             println!(
                 "  {} {} already downloaded, skipping",
-                style("⊙").dim(),
+                output::icon_skip(),
                 name
             );
             continue;
@@ -540,7 +537,7 @@ pub async fn run(
             None => {
                 eprintln!(
                     "  {} No download URL for source '{name}', skipping",
-                    style("!").yellow()
+                    output::icon_warn()
                 );
                 continue;
             }
@@ -574,7 +571,7 @@ pub async fn run(
 
     if !dl_errors.is_empty() {
         for (name, e) in &dl_errors {
-            eprintln!("  {} {name}: {e}", style("✗").red());
+            eprintln!("  {} {name}: {e}", output::icon_error());
         }
         return Err(OsmprjError::DownloadFailed {
             url: String::new(),
@@ -592,9 +589,7 @@ pub async fn run(
     let ram_gb = tuner::system_ram_gb();
     let ssd = config.project.effective_ssd();
 
-    let spinner_style = ProgressStyle::with_template("  {spinner} {msg}")
-        .unwrap()
-        .tick_strings(&["🌍 ", "🌎 ", "🌏 ", "🌐 ", "🌍 "]);
+    let spinner_style = output::spinner_style();
 
     // ── Phase 3a: Update sources ──────────────────────────────────────────────
     if !update_sources.is_empty() {
@@ -648,12 +643,12 @@ pub async fn run(
         .await
         {
             Ok(()) => {
-                spinner.finish_with_message(format!("{} {name} updated", style("✓").green()));
+                spinner.finish_with_message(format!("{} {name} updated", output::icon_success()));
             }
             Err(e) => {
                 spinner
-                    .finish_with_message(format!("{} {name} update failed", style("⚠").yellow()));
-                eprintln!("  {} {name}: {e}", style("⚠").yellow());
+                    .finish_with_message(format!("{} {name} update failed", output::icon_warn()));
+                eprintln!("  {} {name}: {e}", output::icon_warn());
                 eprintln!("  Logs: {}", log_path.display());
             }
         }
@@ -691,7 +686,7 @@ pub async fn run(
                 None => {
                     eprintln!(
                         "  {} PBF file not found for '{name}', skipping import",
-                        style("!").yellow()
+                        output::icon_warn()
                     );
                     continue;
                 }
@@ -750,7 +745,7 @@ pub async fn run(
 
         match run_subprocess(&argv, &env_vars, &log_path, verbose, &spinner).await {
             Ok(()) => {
-                spinner.finish_with_message(format!("{} {name} imported", style("✓").green()));
+                spinner.finish_with_message(format!("{} {name} imported", output::icon_success()));
 
                 // ── Phase 4: Post-processing SQL (fresh imports only) ─────────
                 let sql_files = collect_sql_files(source, &theme_registry);
@@ -758,14 +753,14 @@ pub async fn run(
                     if db_url.is_empty() {
                         eprintln!(
                             "  {} {name}: skipping post-processing SQL — no database_url configured",
-                            style("⚠").yellow()
+                            output::icon_warn()
                         );
                     } else {
                         match db::connect(db_url).await {
                             Err(e) => {
                                 eprintln!(
                                     "  {} {name}: could not connect for post-processing: {e}",
-                                    style("⚠").yellow()
+                                    output::icon_warn()
                                 );
                             }
                             Ok(client) => {
@@ -781,14 +776,14 @@ pub async fn run(
                                     Ok(()) => {
                                         pp_spinner.finish_with_message(format!(
                                             "{} {name} post-processing complete ({} file(s))",
-                                            style("✓").green(),
+                                            output::icon_success(),
                                             sql_files.len()
                                         ));
                                     }
                                     Err(e) => {
                                         pp_spinner.finish_with_message(format!(
                                             "{} {name} post-processing failed",
-                                            style("⚠").yellow()
+                                            output::icon_warn()
                                         ));
                                         eprintln!("  {e}");
                                     }
@@ -801,7 +796,7 @@ pub async fn run(
                 imported.push(name.to_string());
             }
             Err(e) => {
-                spinner.finish_with_message(format!("{} {name} failed", style("✗").red()));
+                spinner.finish_with_message(format!("{} {name} failed", output::icon_error()));
                 eprintln!("\n  Import failed: {e}");
                 eprintln!("  Logs: {}", log_path.display());
                 return Err(OsmprjError::ImportFailed {

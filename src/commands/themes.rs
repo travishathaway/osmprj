@@ -1,4 +1,5 @@
 use crate::error::OsmprjError;
+use crate::output;
 use crate::theme_registry::{ThemeRegistry, ThemeType};
 use console::style;
 
@@ -9,7 +10,7 @@ pub fn run_list() -> Result<(), OsmprjError> {
     println!();
 
     if plugins.is_empty() {
-        println!("  {} No plugin themes found.", style("ℹ").dim());
+        println!("  {} No plugin themes found.", output::icon_info());
         println!();
         println!("  osmprj searched:");
         for p in registry.searched_paths() {

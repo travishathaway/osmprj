@@ -1,0 +1,12 @@
+c_stdlib_version:
+- 2.17
+c_stdlib:
+- sysroot
+cdt_name:
+- conda
+c_compiler:
+- gcc
+cxx_compiler:
+- gxx
+target_platform:
+- linux-64

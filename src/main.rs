@@ -4,11 +4,22 @@ mod db;
 mod error;
 mod geofabrik;
 mod lock;
+mod output;
 mod theme_registry;
 mod tuner;
 
-use clap::{Parser, Subcommand};
+use clap::{Args, ColorChoice, CommandFactory, FromArgMatches, Parser, Subcommand};
 use config::ProjectConfig;
+
+#[derive(Args, Clone)]
+struct ColorArgs {
+    /// Force colored output (overrides NO_COLOR env var)
+    #[arg(long, global = true, conflicts_with = "no_color")]
+    color: bool,
+    /// Disable colored output
+    #[arg(long, global = true, conflicts_with = "color")]
+    no_color: bool,
+}
 
 #[derive(Parser)]
 #[command(
@@ -20,6 +31,9 @@ struct Cli {
     /// Enable verbose output (stream osm2pgsql logs to terminal)
     #[arg(short = 'v', long, global = true)]
     verbose: bool,
+
+    #[command(flatten)]
+    color: ColorArgs,
 
     #[command(subcommand)]
     command: Commands,
@@ -84,6 +98,22 @@ enum ThemesCommands {
     List,
 }
 
+/// Scan raw args and env to determine clap's ColorChoice before full parsing.
+/// This runs before `Cli::parse()` so that `--help` output respects the flags.
+fn early_color_choice() -> ColorChoice {
+    let no_color_env = std::env::var_os("NO_COLOR").is_some_and(|v| !v.is_empty());
+    let args: Vec<String> = std::env::args().collect();
+    if args.iter().any(|a| a == "--no-color") {
+        ColorChoice::Never
+    } else if args.iter().any(|a| a == "--color") {
+        ColorChoice::Always
+    } else if no_color_env {
+        ColorChoice::Never
+    } else {
+        ColorChoice::Auto
+    }
+}
+
 #[tokio::main]
 async fn main() -> miette::Result<()> {
     miette::set_hook(Box::new(|_| {
@@ -96,7 +126,24 @@ async fn main() -> miette::Result<()> {
     }))
     .ok();
 
-    let cli = Cli::parse();
+    let matches = Cli::command()
+        .color(early_color_choice())
+        .styles(output::help_styles())
+        .get_matches();
+    let cli = Cli::from_arg_matches(&matches).unwrap_or_else(|e| e.exit());
+
+    // Apply color settings: CLI flags win, then NO_COLOR env var, then console defaults.
+    if cli.color.no_color {
+        console::set_colors_enabled(false);
+        console::set_colors_enabled_stderr(false);
+    } else if cli.color.color {
+        console::set_colors_enabled(true);
+        console::set_colors_enabled_stderr(true);
+    } else if std::env::var_os("NO_COLOR").is_some_and(|v| !v.is_empty()) {
+        console::set_colors_enabled(false);
+        console::set_colors_enabled_stderr(false);
+    }
+
     let verbose = cli.verbose;
 
     match cli.command {

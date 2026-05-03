@@ -18,6 +18,7 @@ A command-line tool for managing OpenStreetMap data imports into PostgreSQL. It 
   - [status](#status)
   - [sync](#sync)
   - [remove](#remove)
+  - [themes list](#themes-list)
 - [Configuration Reference](#configuration-reference)
 - [Contributing](#contributing)
 - [Sponsor This Project](#sponsor-this-project)
@@ -136,18 +137,10 @@ osmprj add europe/france --theme shortbread_v1 --schema france
 Use `--path` and `--name` together. The file is used directly without any download.
 
 ```bash
-osmprj add --path /data/my-region.osm.pbf --name my-region --theme shortbread_v1
+osmprj add --path /data/my-region.osm.pbf --name my-region --theme shortbread
 ```
 
-**Available themes** (requires `osm2pgsql-themepark`):
-
-| Theme | Description |
-|---|---|
-| `shortbread_v1` | [Shortbread](https://shortbread-tiles.org) vector tile schema |
-| `shortbread_v1_gen` | Shortbread with generalised geometry layers |
-| `basic` / `generic` | Generic flexible schema |
-| `osmcarto` | OpenStreetMap Carto style schema |
-| `experimental` | Experimental themepark config |
+See `osmprj themes list` for a full list of available themes.
 
 Schema names are auto-derived from the source name by replacing `/` and `-` with `_` (e.g. `europe/france` → `europe_france`). Use `--schema` to override.
 
@@ -254,6 +247,32 @@ osmprj remove germany -f
 **What happens to the PBF file?**
 
 The downloaded `.osm.pbf` file in the cache directory is **not** deleted. It may be large and reusable if you re-add the source later. Delete it manually from the directory shown in `data_dir` if you no longer need it.
+
+### themes list
+
+```
+osmprj themes list
+```
+
+List all available themes.
+
+Currently available themes:
+
+- **generic**, generic basic topics theme
+- **nwr**, Node/Way/Relation (NWR) topic theme
+- **osmcarto**, OSM Carto theme
+- **pgosm**, PgOSM Flex theme: default variation
+- **pgosm-basic** PgOSM Flex theme: basic variation
+- **pgosm-everything**, PgOSM Flex theme: everything variation
+- **pgosm-minimal**, PgOSM Flex theme: minimal variation
+- **shortbread**, shortbread theme
+- **shortbread-gen**, shortbread theme with generalization
+
+If you want to expand and add your own themes, append to the `OSMPRJ_THEME_PATH` environment variable so that your themes are discoverable:
+
+```
+export OSMPRJ_THEME_PATH="$OSMPRJ_THEME_PATH:/your/themes"
+```
 
 ---
 

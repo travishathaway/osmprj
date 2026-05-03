@@ -1,5 +1,6 @@
 use crate::config::ProjectConfig;
 use crate::db;
+use crate::output;
 
 pub async fn run(config: &ProjectConfig) -> Result<(), crate::error::OsmprjError> {
     let sources = &config.sources;
@@ -19,11 +20,14 @@ pub async fn run(config: &ProjectConfig) -> Result<(), crate::error::OsmprjError
         }
         Some(u) => match db::connect(u).await {
             Ok(c) => {
-                println!("  database:  {u}  ✓ connected");
+                println!("  database:  {u}  {} connected", output::icon_success());
                 c
             }
             Err(e) => {
-                println!("  database:  {u}  ✗ connection failed");
+                println!(
+                    "  database:  {u}  {} connection failed",
+                    output::icon_error()
+                );
                 println!("             {e}");
                 println!(
                     "             Check that PostgreSQL is running and the URL is correct.\n\
@@ -62,7 +66,11 @@ pub async fn run(config: &ProjectConfig) -> Result<(), crate::error::OsmprjError
     for (name, source) in sorted {
         let schema = source.effective_schema(name);
         let exists = db::schema_exists(&client, &schema).await.unwrap_or(false);
-        let indicator = if exists { "✓" } else { "✗" };
+        let indicator = if exists {
+            output::icon_success().to_string()
+        } else {
+            output::icon_error().to_string()
+        };
         let note = if exists {
             String::new()
         } else {

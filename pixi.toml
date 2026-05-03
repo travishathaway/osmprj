@@ -11,19 +11,7 @@ dev = { features = ["dev"], solve-group = "default" }
 rust = { features = ["rust"], no-default-feature = true }
 
 [dependencies]
-pyosmium = ">=4.3.0"
-packaging = ">=23.0"
-psycopg = ">=3.1"
-sh = ">=1.14.2"
-pydantic = ">=2.0"
-pydantic-settings = ">=2.0"
-tomli = ">=2.0.1" #; python_version<'3.11'",
-postgresql = ">=18"
-osmium-tool = "*"
 osm2pgsql = ">=2"
-platformdirs = ">=4.9.2,<5"
-postgis = ">=3.6.3,<4"
-luarocks = ">=3.13.0,<4"
 osm2pgsql-themepark = "*"
 pgosm-themepark = "*"
 
@@ -34,25 +22,25 @@ rust = ">=1.80"
 release = "cargo build --release"
 
 [feature.dev.dependencies]
+rust = ">=1.80"
 psycopg = ">=3.1"
-coverage = ">=7.13.1"
 pytest = ">=7.0"
 pytest-timeout = ">=2.1"
 pytest-mock = ">=3.15.1,<4"
-pytest-cov = ">=7.0.0,<8"
 pytest-sugar = ">=1.1.1,<2"
-ruff = ">=0.15.0,<0.16"
 mypy = ">=1.19.1,<2"
 pre-commit = ">=4.5.1,<5"
 pylint = ">=4.0.4,<5"
-commitizen = ">=4.13.5,<5"
 pg-helper = "*"
+postgresql = ">=18.0"
+postgis = ">=3.6.3,<4"
 prek = ">=0.3.11,<0.4"
+rattler-build = "*"
+ruff = ">=0.15.0,<0.16"
+tomli = ">=2.0.1" #; python_version<'3.11'",
 
 [feature.dev.activation]
 env = { PATH = "$PIXI_PROJECT_ROOT/target/debug:$PATH", OSMPRJ_THEME_PATH = "$PIXI_PROJECT_ROOT/themes" }
 
 [feature.dev.tasks]
 test = "pytest tests"
-test-unit = "pytest tests/unit"
-test-integration = "pytest tests/integration"
