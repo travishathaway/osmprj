@@ -1,0 +1,149 @@
+/**
+ * Custom CSS for osmprj docs site.
+ * OSM/geo-inspired green-teal palette.
+ */
+
+/* Docusaurus color tokens */
+:root {
+  --ifm-color-primary: #2e8b57;
+  --ifm-color-primary-dark: #287a4e;
+  --ifm-color-primary-darker: #25734a;
+  --ifm-color-primary-darkest: #1e5f3d;
+  --ifm-color-primary-light: #349c60;
+  --ifm-color-primary-lighter: #37a364;
+  --ifm-color-primary-lightest: #41b872;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #4ecb7a;
+  --ifm-color-primary-dark: #35c46c;
+  --ifm-color-primary-darker: #2ac065;
+  --ifm-color-primary-darkest: #22a053;
+  --ifm-color-primary-light: #67d289;
+  --ifm-color-primary-lighter: #72d590;
+  --ifm-color-primary-lightest: #94dfa8;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+/* ─── Hero section ────────────────────────────────────────────── */
+
+.hero {
+  padding: 5rem 0 4rem;
+  text-align: center;
+  background: linear-gradient(
+    160deg,
+    var(--ifm-color-primary-darkest) 0%,
+    var(--ifm-color-primary-dark) 100%
+  );
+  color: #fff;
+}
+
+.hero__logo {
+  width: 140px;
+  height: auto;
+  margin-bottom: 1.5rem;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
+}
+
+.hero__title {
+  font-size: 3.5rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  color: #fff;
+}
+
+.hero__subtitle {
+  font-size: 1.35rem;
+  font-weight: 400;
+  opacity: 0.9;
+  margin-bottom: 2rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  color: #fff;
+}
+
+.hero__buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.hero__buttons .button--secondary {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.7);
+  color: #fff;
+}
+
+.hero__buttons .button--secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #fff;
+}
+
+/* ─── Feature cards ───────────────────────────────────────────── */
+
+.features {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+  padding: 4rem 2rem;
+  background: var(--ifm-background-color);
+}
+
+.featureCard {
+  flex: 1 1 240px;
+  max-width: 300px;
+  padding: 2rem 1.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  text-align: center;
+  transition: box-shadow 0.2s;
+}
+
+.featureCard:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.featureCard__icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.featureCard__title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: var(--ifm-color-primary);
+}
+
+.featureCard__description {
+  font-size: 0.95rem;
+  color: var(--ifm-color-emphasis-700);
+  line-height: 1.5;
+}
+
+/* ─── Demo section ────────────────────────────────────────────── */
+
+.demo {
+  padding: 4rem 2rem;
+  background: var(--ifm-background-surface-color);
+  text-align: center;
+}
+
+.demo__title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+}
+
+.demo__player {
+  max-width: 860px;
+  margin: 0 auto;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
