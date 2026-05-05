@@ -14,6 +14,8 @@ rust = { features = ["rust"], no-default-feature = true }
 osm2pgsql = ">=2"
 osm2pgsql-themepark = "*"
 pgosm-themepark = "*"
+pyosmium = ">=4.3.0,<5"
+psycopg = ">=3.3.4,<4"
 
 [feature.rust.dependencies]
 rust = ">=1.80"
