@@ -3,45 +3,71 @@
  * OSM/geo-inspired green-teal palette.
  */
 
+/* ─── Custom fonts ────────────────────────────────────────────── */
+
+/* @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600;1,700&family=Source+Sans+3:wght@400;600&display=swap');*/
+@import url('https://fonts.googleapis.com/css2?family=PT+Mono:ital,wght@0,600;0,700;1,600;1,700&family=Source+Sans+3:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Science+Gothic:ital,wght@0,600;0,700;1,600;1,700&family=Source+Sans+3:wght@400;600&display=swap');
+
 /* Docusaurus color tokens */
 :root {
-  --ifm-color-primary: #2e8b57;
-  --ifm-color-primary-dark: #287a4e;
-  --ifm-color-primary-darker: #25734a;
-  --ifm-color-primary-darkest: #1e5f3d;
-  --ifm-color-primary-light: #349c60;
-  --ifm-color-primary-lighter: #37a364;
-  --ifm-color-primary-lightest: #41b872;
+  --ifm-color-primary: #4E7A1E;
+  --ifm-color-primary-dark: #46701B;
+  --ifm-color-primary-darker: #426919;
+  --ifm-color-primary-darkest: #375815;
+  --ifm-color-primary-light: #568421;
+  --ifm-color-primary-lighter: #5A8A23;
+  --ifm-color-primary-lightest: #659B29;
   --ifm-code-font-size: 95%;
+  --ifm-font-size-base: 18px;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --ifm-heading-font-family: 'PT Mono', Georgia, serif;
+  --ifm-font-family-base: 'Source Sans 3', system-ui, sans-serif;
 }
 
 [data-theme='dark'] {
-  --ifm-color-primary: #4ecb7a;
-  --ifm-color-primary-dark: #35c46c;
-  --ifm-color-primary-darker: #2ac065;
-  --ifm-color-primary-darkest: #22a053;
-  --ifm-color-primary-light: #67d289;
-  --ifm-color-primary-lighter: #72d590;
-  --ifm-color-primary-lightest: #94dfa8;
+  --ifm-color-primary: #ADCC73;
+  --ifm-color-primary-dark: #9BBE63;
+  --ifm-color-primary-darker: #93B75C;
+  --ifm-color-primary-darkest: #84A84F;
+  --ifm-color-primary-light: #BBDA83;
+  --ifm-color-primary-lighter: #C0DD8C;
+  --ifm-color-primary-lightest: #CAE39D;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+
+/* ─── Navbar section ──────────────────────────────────────────── */
+
+.navbar__title {
+  font-family: 'PT Mono';
 }
 
 /* ─── Hero section ────────────────────────────────────────────── */
 
 .hero {
-  padding: 5rem 0 4rem;
+  padding: 5rem 2rem 4rem;
   text-align: center;
   background: linear-gradient(
     160deg,
-    var(--ifm-color-primary-darkest) 0%,
-    var(--ifm-color-primary-dark) 100%
+    #CDDFA4 0%,
+    #D4E8B4 100%
   );
-  color: #fff;
+  color: #2a2a2a;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 3rem;
+  flex-wrap: wrap;
+}
+
+.hero .col {
+  max-width: 500px;
 }
 
 .hero__logo {
-  width: 140px;
+  width: 300px;
   height: auto;
   margin-bottom: 1.5rem;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
@@ -51,18 +77,20 @@
   font-size: 3.5rem;
   font-weight: 800;
   margin-bottom: 1rem;
-  color: #fff;
+  color: #2a2a2a;
 }
 
 .hero__subtitle {
-  font-size: 1.35rem;
-  font-weight: 400;
-  opacity: 0.9;
+  font-size: 1.65rem;
+  font-weight: bold;
+  opacity: 0.85;
   margin-bottom: 2rem;
   max-width: 600px;
   margin-left: auto;
   margin-right: auto;
-  color: #fff;
+  color: #2a2a2a;
+  text-align: left;
+  font-family: 'PT Mono', monospace;
 }
 
 .hero__buttons {
@@ -74,13 +102,40 @@
 
 .hero__buttons .button--secondary {
   background: transparent;
-  border-color: rgba(255, 255, 255, 0.7);
-  color: #fff;
+  border-color: rgba(42, 42, 42, 0.4);
+  color: #2a2a2a;
 }
 
 .hero__buttons .button--secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: #fff;
+  background: rgba(42, 42, 42, 0.08);
+  border-color: #2a2a2a;
+}
+
+.hero__gh-star-btn {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .hero {
+    flex-direction: column;
+    padding: 3rem 1.5rem;
+    gap: 1.5rem;
+  }
+
+  .hero .col {
+    max-width: 100%;
+    width: 85%;
+  }
+
+  .hero__logo {
+    width: 180px;
+  }
+
+  .hero__subtitle {
+    font-size: 1.15rem;
+  }
 }
 
 /* ─── Feature cards ───────────────────────────────────────────── */
@@ -135,13 +190,13 @@
 }
 
 .demo__title {
-  font-size: 1.75rem;
+  font-size: 2.5rem;
   font-weight: 700;
   margin-bottom: 2rem;
 }
 
 .demo__player {
-  max-width: 860px;
+  max-width: 1325px;
   margin: 0 auto;
   border-radius: 8px;
   overflow: hidden;

@@ -4,8 +4,8 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
   title: 'osmprj',
-  tagline: 'A friendly, modern tool for managing OSM data with PostgreSQL',
-  favicon: 'img/favicon.ico',
+  tagline: 'A friendly, modern tool for managing OpenStreetMap data with PostgreSQL',
+  favicon: 'favicon.ico',
 
   url: 'https://travishathaway.github.io',
   baseUrl: '/osmprj/',
@@ -48,6 +48,12 @@ const config: Config = {
     image: 'img/osmprj-social-card.png',
     navbar: {
       title: 'osmprj',
+      logo: {
+        alt: 'osmprj',
+        src: './osmprj-logo-small.svg',
+        height: 48,
+        width: 48
+      },
       items: [
         {
           type: 'docSidebar',

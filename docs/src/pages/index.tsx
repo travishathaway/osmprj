@@ -8,22 +8,22 @@ import Layout from '@theme/Layout';
 
 const features = [
   {
-    icon: '⚡',
-    title: 'Simple Workflow',
+    icon: '💾',
+    title: 'Project based workflow',
     description:
-      'Three commands: init, add, sync. osmprj handles the rest — downloading, tuning, importing, and tracking state.',
+      'Initialize and save your project configuration right alongside your code for easier sharing.'
   },
   {
-    icon: '🔧',
-    title: 'Auto-Tuned Imports',
+    icon: '🏛️',
+    title: 'Solid foundation',
     description:
-      'osmprj inspects your RAM and storage type and picks the right osm2pgsql flags automatically. No manual tuning required.',
+      'Built on top of the tried and true osm2pgsql for reliable imports and performance.'
   },
   {
-    icon: '🔄',
-    title: 'Incremental Updates',
+    icon: '🎨',
+    title: 'Builtin themes',
     description:
-      'After the first import, subsequent syncs apply only the changes since the last run — fast and bandwidth-efficient.',
+      'Easily select default themes for a variety database schema layouts that can later be synced.'
   },
 ];
 
@@ -33,23 +33,27 @@ function Hero() {
   const { siteConfig } = useDocusaurusContext();
   return (
     <header className="hero">
-      <img
-        src="/osmprj/osmprj-logo-big.svg"
-        alt="osmprj logo"
-        className="hero__logo"
-      />
-      <h1 className="hero__title">{siteConfig.title}</h1>
-      <p className="hero__subtitle">{siteConfig.tagline}</p>
-      <div className="hero__buttons">
-        <Link className="button button--primary button--lg" to="/docs/intro">
-          Get Started
-        </Link>
-        <Link
-          className="button button--secondary button--lg"
-          href="https://github.com/travishathaway/osmprj"
-        >
-          GitHub
-        </Link>
+      <div className="col hero__banner-image">
+        <img
+            src="/osmprj/osmprj-logo-big.svg"
+            alt="osmprj logo"
+            className="hero__logo"
+        />
+      </div>
+      <div className="col hero__text">
+        <p className="hero__subtitle">{siteConfig.tagline}</p>
+        <div className="hero__buttons">
+          <Link className="button button--primary button--lg" to="/docs/intro">
+            Get Started
+          </Link>
+          <iframe
+              className="hero__gh-star-btn"
+            src="https://ghbtns.com/github-btn.html?user=travishathaway&repo=osmprj&type=star&count=true&size=large"
+            width={160}
+            height={30}
+            title="GitHub Stars"
+          />
+        </div>
       </div>
     </header>
   );
@@ -98,13 +102,14 @@ function Demo() {
                   '/osmprj/osmprj.cast',
                   containerRef.current,
                   {
-                    cols: 100,
-                    rows: 28,
+                    cols: 120,
+                    rows: 20,
                     autoPlay: false,
                     loop: false,
-                    speed: 1,
-                    theme: 'monokai',
-                    fit: 'width',
+                    speed: 1.5,
+                    theme: 'dracula',
+                    fit: false,
+                    terminalFontSize: 'medium'
                   }
                 );
                 return () => player.dispose();
