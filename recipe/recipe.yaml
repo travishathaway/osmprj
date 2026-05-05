@@ -25,6 +25,8 @@ requirements:
     - osm2pgsql
     - osm2pgsql-themepark
     - pgosm-themepark
+    - psycopg
+    - pyosmium
 
 tests:
   - script:
