@@ -143,6 +143,7 @@ postgres/
 reports/
 
 # docs site (Docusaurus)
+!docs/static/osmprj.cast
 docs/node_modules/
 docs/build/
 docs/.docusaurus/
