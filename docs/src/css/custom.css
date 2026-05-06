@@ -5,9 +5,10 @@
 
 /* ─── Custom fonts ────────────────────────────────────────────── */
 
-/* @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600;1,700&family=Source+Sans+3:wght@400;600&display=swap');*/
-@import url('https://fonts.googleapis.com/css2?family=PT+Mono:ital,wght@0,600;0,700;1,600;1,700&family=Source+Sans+3:wght@400;600&display=swap');
-/* @import url('https://fonts.googleapis.com/css2?family=Science+Gothic:ital,wght@0,600;0,700;1,600;1,700&family=Source+Sans+3:wght@400;600&display=swap');*/
+/* Self-hosted via @fontsource — no Google Fonts dependency */
+@import '@fontsource/pt-mono/400.css';
+@import '@fontsource/source-sans-3/400.css';
+@import '@fontsource/source-sans-3/600.css';
 
 /* Docusaurus color tokens */
 :root {
@@ -21,7 +22,7 @@
   --ifm-code-font-size: 95%;
   --ifm-font-size-base: 18px;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
-  --ifm-heading-font-family: 'PT Mono', Georgia, serif;
+  --ifm-heading-font-family: 'PT Mono', ui-monospace, 'Cascadia Code', 'Menlo', monospace;
   --ifm-font-family-base: 'Source Sans 3', system-ui, sans-serif;
 }
 
