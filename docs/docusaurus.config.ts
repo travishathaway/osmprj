@@ -36,7 +36,10 @@ const config: Config = {
           sidebarPath: './sidebars.ts',
           editUrl: 'https://github.com/travishathaway/osmprj/edit/main/docs/',
         },
-        blog: false,
+        blog: {
+          path: "blog",
+          blogSidebarTitle: "All Posts"
+        },
         theme: {
           customCss: './src/css/custom.css',
         },
@@ -45,12 +48,12 @@ const config: Config = {
   ],
 
   themeConfig: {
-    image: 'img/osmprj-social-card.png',
+    image: 'img/osmprj-logo-big.svg',
     navbar: {
       title: 'osmprj',
       logo: {
         alt: 'osmprj',
-        src: './osmprj-logo-small.svg',
+        src: './img/osmprj-logo-small.svg',
         height: 48,
         width: 48
       },
@@ -60,6 +63,11 @@ const config: Config = {
           sidebarId: 'docsSidebar',
           position: 'left',
           label: 'Docs',
+        },
+        {
+          to: 'blog',
+          label: 'Blog',
+          position: 'left'
         },
         {
           href: 'https://github.com/travishathaway/osmprj',

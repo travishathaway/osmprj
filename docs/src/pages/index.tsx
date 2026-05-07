@@ -35,7 +35,7 @@ function Hero() {
     <header className="hero">
       <div className="col hero__banner-image">
         <img
-            src="/osmprj/osmprj-logo-big.svg"
+            src="/osmprj/img/osmprj-logo-big.svg"
             alt="osmprj logo"
             className="hero__logo"
         />
@@ -102,7 +102,7 @@ function Demo() {
                   '/osmprj/osmprj.cast',
                   containerRef.current,
                   {
-                    cols: 120,
+                    cols: 80,
                     rows: 20,
                     autoPlay: false,
                     loop: false,

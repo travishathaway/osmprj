@@ -144,6 +144,7 @@ reports/
 
 # docs site (Docusaurus)
 !docs/static/osmprj.cast
+!scripts/osmprj.asciinema.sh
 docs/node_modules/
 docs/build/
 docs/.docusaurus/

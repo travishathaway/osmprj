@@ -6,9 +6,22 @@
 /* ─── Custom fonts ────────────────────────────────────────────── */
 
 /* Self-hosted via @fontsource — no Google Fonts dependency */
-@import '@fontsource/pt-mono/400.css';
+@import '@fontsource/space-mono/400.css';
+@import '@fontsource/space-mono/400-italic.css';
+@import '@fontsource/space-mono/700.css';
+@import '@fontsource/space-mono/700-italic.css';
 @import '@fontsource/source-sans-3/400.css';
+@import '@fontsource/source-sans-3/400-italic.css';
 @import '@fontsource/source-sans-3/600.css';
+@import '@fontsource/source-sans-3/700.css';
+@import '@fontsource/source-sans-3/700-italic.css';
+
+/* ─── Body text size ──────────────────────────────────────────── */
+
+/* Target prose/article text directly without affecting headings */
+article, .markdown {
+  font-size: 20px;
+}
 
 /* Docusaurus color tokens */
 :root {
@@ -22,7 +35,7 @@
   --ifm-code-font-size: 95%;
   --ifm-font-size-base: 18px;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
-  --ifm-heading-font-family: 'PT Mono', ui-monospace, 'Cascadia Code', 'Menlo', monospace;
+  --ifm-heading-font-family: 'Space Mono', ui-monospace, 'Cascadia Code', 'Menlo', monospace;
   --ifm-font-family-base: 'Source Sans 3', system-ui, sans-serif;
 }
 
@@ -41,7 +54,7 @@
 /* ─── Navbar section ──────────────────────────────────────────── */
 
 .navbar__title {
-  font-family: 'PT Mono';
+  font-family: 'Space Mono';
 }
 
 /* ─── Hero section ────────────────────────────────────────────── */
@@ -82,7 +95,7 @@
 }
 
 .hero__subtitle {
-  font-size: 1.65rem;
+  font-size: 1.5rem;
   font-weight: bold;
   opacity: 0.85;
   margin-bottom: 2rem;
@@ -91,7 +104,7 @@
   margin-right: auto;
   color: #2a2a2a;
   text-align: left;
-  font-family: 'PT Mono', monospace;
+  font-family: 'Space Mono', monospace;
 }
 
 .hero__buttons {
