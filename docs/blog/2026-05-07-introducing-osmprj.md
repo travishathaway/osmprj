@@ -124,6 +124,10 @@ for packagers. This required the following steps:
 4. Create a [conda recipe](https://github.com/travishathaway/gis-forge/blob/main/osm2pgsql-themepark/recipe.yaml)
    so this can be published to my gis-forge channel.
 
+All of these changes can be seen in my fork and branch:
+
+- [travishathaway/osm2pgsql-themepark:luarocks](https://github.com/travishathaway/osm2pgsql-themepark/tree/luarocks)
+
 ### Themes in osmprj
 
 One final piece was missing in order to get themes wired up correctly in osmprj. In osm2pgsql-themepark,
@@ -135,6 +139,8 @@ own by appending to the `OSMPRJ_THEME_PATH` environment variable.
 
 I decided to give each osmprj theme its own small `theme.toml` so user can easily add metadata to them.
 These themes also technically support custom SQL scripts that can be run post-import.
+
+---
 
 ## Motivation
 
@@ -162,8 +168,8 @@ file, I envisioned something that could be checked in alongside the code you wri
 your data analysis so that it becomes easy to share and duplicate your work across different
 computers and environments.
 
-## Themepark
+---
 
-Another goal I had with this project was to try out the  beta version of osm2pgsql-themepark.
-After working with PgOSM-Flex, I could see a benefit for building out a theme system based on
-resuable components.
+## What's next?
+
+*TBD*
