@@ -21,6 +21,20 @@ I have for contributing back to and improving osm2pgsql-themepark.
 
 ## Overview
 
+### Installing
+
+This easiest way to get osmprj is by installing it as a conda package with [pixi](https://pixi.sh):
+
+```commandline
+pixi global install -c gis-forge -c conda-forge osmprj
+```
+
+Or with [conda](https://docs.conda.io):
+
+```commandline
+conda create -n osmprj -c gis-forge -c conda-forge osmprj
+```
+
 ### Initializing your project
 
 With osmprj, you can download and set up a PostgreSQL database with just a few commands:
@@ -48,11 +62,11 @@ At this point, your `osmprj.toml` file looks like this:
 
 ```toml
 [project]
-database_url = "postgresql://postgres@localhost:65432/postgres"
+database_url = "postgresql://user@localhost:5432/db"
 
 [sources]
 monaco = { schema = "monaco" }
-bremen = { schema = "monaco", theme = "pgosm" }
+bremen = { schema = "bremen", theme = "pgosm" }
 ```
 
 ### Syncing to your database
@@ -67,10 +81,60 @@ osmprj sync
 Because replication is enabled via the `osm2pgsql-replication` command, when we want to
 update our database later, we simply just run `osmprj sync` again.
 
+### Removing sources
 
+If you to remove a source from your project, you can use `osmprj remove`:
 
+```commandline
+osmprj remove monaco
+```
 
+This not only removes the source from `osmprj.toml` but also from the database to keep things
+in sync and tidy 🧼 🧹.
 
+---
+
+## How this all works
+
+Now that I've given the high-level overview of how the tool works, lets take a peek behind
+the curtains to see all the moving pieces.
+
+Like I alluded to in the introduction, this tools is basically a wrapper around osm2pgsql and
+utilizes the beta version of osm2pgsql-themepark. I've also created a new osm2pgsql-themepark
+theme called [pgosm-themepark](https://github.com/travishathaway/pgosm-themepark), which is
+based off of the [pgosm-flex](https://pgosm-flex.com) project.
+
+To make everything easy to install, it is all packaged with conda. The dependencies themselves
+are very diverse: osm2pgsql is C/C++ with Python and Lua scripts, plus osmprj itself is written
+in Rust. So, conda is actually a perfect fit for this (and no, I'm not just saying that because
+I'm one of the conda maintainers!).
+
+Right now, this is being distributed via my own [gis-forge](https://anaconda.org/gis-forge) channel,
+but I plan on moving it to the more popular [conda-forge](https://conda-forge.org) channel soon.
+
+### Themepark
+
+Right now, the osm2pgsql-themepark isn't actually available in any packaging ecosystem, so part of
+getting everything working required me to make updates to this repository to make it more friendly
+for packagers. This required the following steps:
+
+1. Create a new `lua/` directory; this holds all the Lua for files in the package.
+2. Move `themes/` under this directory in the `themepark/` module.
+3. Create a Luarocks `.rockspec` file to hold the metadata for the project enable creating a Lua package.
+4. Create a [conda recipe](https://github.com/travishathaway/gis-forge/blob/main/osm2pgsql-themepark/recipe.yaml)
+   so this can be published to my gis-forge channel.
+
+### Themes in osmprj
+
+One final piece was missing in order to get themes wired up correctly in osmprj. In osm2pgsql-themepark,
+there's a directory called `config/` that is meant to be the entry point for a using a theme. Because these
+were not included in the Lua package I mentioned above (and they shouldn't be because they meant to be user
+defined configurations), I add them to osmprj in my own `themes/` directory. There are several differnt
+built-in themes for users (e.g. "shortbread" and "pgosm") and users also have the ability to add their
+own by appending to the `OSMPRJ_THEME_PATH` environment variable.
+
+I decided to give each osmprj theme its own small `theme.toml` so user can easily add metadata to them.
+These themes also technically support custom SQL scripts that can be run post-import.
 
 ## Motivation
 

@@ -210,7 +210,7 @@ article, .markdown {
 }
 
 .demo__player {
-  max-width: 1325px;
+  max-width: 800px;
   margin: 0 auto;
   border-radius: 8px;
   overflow: hidden;
