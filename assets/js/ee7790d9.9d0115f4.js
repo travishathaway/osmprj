@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunkosmprj_docs=globalThis.webpackChunkosmprj_docs||[]).push([[113],{3989(o){o.exports=JSON.parse('{"metadata":{"permalink":"/osmprj/blog","page":1,"postsPerPage":10,"totalPages":1,"totalCount":1,"blogDescription":"Blog","blogTitle":"Blog"}}')}}]);

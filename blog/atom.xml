@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <id>https://travishathaway.github.io/osmprj/blog</id>
+    <title>osmprj Blog</title>
+    <updated>2026-05-07T00:00:00.000Z</updated>
+    <generator>https://github.com/jpmonette/feed</generator>
+    <link rel="alternate" href="https://travishathaway.github.io/osmprj/blog"/>
+    <subtitle>osmprj Blog</subtitle>
+    <icon>https://travishathaway.github.io/osmprj/favicon.ico</icon>
+    <entry>
+        <title type="html"><![CDATA[Introducing osmprj]]></title>
+        <id>https://travishathaway.github.io/osmprj/blog/2026/05/07/introducing-osmprj</id>
+        <link href="https://travishathaway.github.io/osmprj/blog/2026/05/07/introducing-osmprj"/>
+        <updated>2026-05-07T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[I'm excited to announce the alpha release of a new tool for managing OpenStreetMap]]></summary>
+        <content type="html"><![CDATA[<p>I'm excited to announce the alpha release of a new tool for managing <a href="https://openstreetmap.org/" target="_blank" rel="noopener noreferrer" class="">OpenStreetMap</a>
+(OSM) data with <a href="https://postgresql.org/" target="_blank" rel="noopener noreferrer" class="">PostgreSQL</a>: osmprj. This tool aims to reduce the hassle of
+working with OSM data in PostgreSQL by providing workflows similar to modern package managers like
+<a href="https://docs.astral.sh/uv/" target="_blank" rel="noopener noreferrer" class="">uv</a>, <a href="https://crates.io/" target="_blank" rel="noopener noreferrer" class="">Cargo</a>, <a href="https://npmjs.com/" target="_blank" rel="noopener noreferrer" class="">npm</a> or
+<a href="https://pixi.prefix.dev/latest" target="_blank" rel="noopener noreferrer" class="">pixi</a> It's built on top of the tried and true <a href="https://osm2pgsql.org/" target="_blank" rel="noopener noreferrer" class="">osm2pgsql</a>
+utility and utilizes the brand  new <a href="https://osm2pgsql.org/themepark" target="_blank" rel="noopener noreferrer" class="">osm2pgsql-themepark</a>
+framework that offers an endless posibility of schema layouts for your OSM data.</p>
+<p>In this post, I give you an overview of how this tool works, some background
+on how/why I created it and what I wish to accomplish in the future, including some ideas
+I have for contributing back to osm2pgsql-themepark.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="overview">Overview<a href="https://travishathaway.github.io/osmprj/blog/2026/05/07/introducing-osmprj#overview" class="hash-link" aria-label="Direct link to Overview" title="Direct link to Overview" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="installing">Installing<a href="https://travishathaway.github.io/osmprj/blog/2026/05/07/introducing-osmprj#installing" class="hash-link" aria-label="Direct link to Installing" title="Direct link to Installing" translate="no">​</a></h3>
+<p>This easiest way to get osmprj is by installing it as a conda package with <a href="https://pixi.sh/" target="_blank" rel="noopener noreferrer" class="">pixi</a>:</p>
+<div class="language-commandline codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-commandline codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#393A34"><span class="token plain">pixi global install -c gis-forge -c conda-forge osmprj</span><br></div></code></pre></div></div>
+<p>Or with <a href="https://docs.conda.io/" target="_blank" rel="noopener noreferrer" class="">conda</a>:</p>
+<div class="language-commandline codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-commandline codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#393A34"><span class="token plain">conda create -n osmprj -c gis-forge -c conda-forge osmprj</span><br></div></code></pre></div></div>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="basic-workflow">Basic workflow<a href="https://travishathaway.github.io/osmprj/blog/2026/05/07/introducing-osmprj#basic-workflow" class="hash-link" aria-label="Direct link to Basic workflow" title="Direct link to Basic workflow" translate="no">​</a></h3>
+<p>With osmprj, you can download and set up a PostgreSQL database with just a few commands.</p>
+<h4 class="anchor anchorTargetStickyNavbar_Vzrq" id="1-initializing-the-project">1. Initializing the project<a href="https://travishathaway.github.io/osmprj/blog/2026/05/07/introducing-osmprj#1-initializing-the-project" class="hash-link" aria-label="Direct link to 1. Initializing the project" title="Direct link to 1. Initializing the project" translate="no">​</a></h4>
+<div class="language-commandline codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-commandline codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#393A34"><span class="token plain">osmprj init --db postgresql://user@localhost:5432/db</span><br></div></code></pre></div></div>
+<h4 class="anchor anchorTargetStickyNavbar_Vzrq" id="2-adding-data-sources">2. Adding data sources<a href="https://travishathaway.github.io/osmprj/blog/2026/05/07/introducing-osmprj#2-adding-data-sources" class="hash-link" aria-label="Direct link to 2. Adding data sources" title="Direct link to 2. Adding data sources" translate="no">​</a></h4>
+<p>Once the project is initialized, you add data sources. These are direct mappings to what's
+available on <a href="https://downloads.geofabrik.com/" target="_blank" rel="noopener noreferrer" class="">Geofabrik</a>:</p>
+<div class="language-commandline codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-commandline codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#393A34"><span class="token plain">osmprj add monaco</span><br></div></code></pre></div></div>
+<p>You can also specify a custom schema layout with the <code>--theme</code> option:</p>
+<div class="language-commandline codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-commandline codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#393A34"><span class="token plain">osmprj add bremen --theme pgosm</span><br></div></code></pre></div></div>
+<p>At this point, your <code>osmprj.toml</code> file looks like this:</p>
+<div class="language-toml codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-toml codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#393A34"><span class="token punctuation" style="color:#393A34">[</span><span class="token table class-name">project</span><span class="token punctuation" style="color:#393A34">]</span><span class="token plain"></span><br></div><div class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token key property" style="color:#36acaa">database_url</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">=</span><span class="token plain"> </span><span class="token string" style="color:#e3116c">"postgresql://user@localhost:5432/db"</span><span class="token plain"></span><br></div><div class="token-line" style="color:#393A34"><span class="token plain" style="display:inline-block"></span><br></div><div class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token punctuation" style="color:#393A34">[</span><span class="token table class-name">sources</span><span class="token punctuation" style="color:#393A34">]</span><span class="token plain"></span><br></div><div class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token key property" style="color:#36acaa">monaco</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">=</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">{</span><span class="token plain"> </span><span class="token key property" style="color:#36acaa">schema</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">=</span><span class="token plain"> </span><span class="token string" style="color:#e3116c">"monaco"</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">}</span><span class="token plain"></span><br></div><div class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token key property" style="color:#36acaa">bremen</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">=</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">{</span><span class="token plain"> </span><span class="token key property" style="color:#36acaa">schema</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">=</span><span class="token plain"> </span><span class="token string" style="color:#e3116c">"bremen"</span><span class="token punctuation" style="color:#393A34">,</span><span class="token plain"> </span><span class="token key property" style="color:#36acaa">theme</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">=</span><span class="token plain"> </span><span class="token string" style="color:#e3116c">"pgosm"</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">}</span><br></div></code></pre></div></div>
+<h4 class="anchor anchorTargetStickyNavbar_Vzrq" id="3-syncing-to-your-database">3. Syncing to your database<a href="https://travishathaway.github.io/osmprj/blog/2026/05/07/introducing-osmprj#3-syncing-to-your-database" class="hash-link" aria-label="Direct link to 3. Syncing to your database" title="Direct link to 3. Syncing to your database" translate="no">​</a></h4>
+<p>With the <code>osmprj.toml</code> defined the way you want, you can download and import
+into the data with the following command:</p>
+<div class="language-commandline codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-commandline codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#393A34"><span class="token plain">osmprj sync</span><br></div></code></pre></div></div>
+<p>Because replication is enabled via osm2pgsql, when you want to
+update your database later, you simply run <code>osmprj sync</code> again.</p>
+<h4 class="anchor anchorTargetStickyNavbar_Vzrq" id="4-removing-sources">4. Removing sources<a href="https://travishathaway.github.io/osmprj/blog/2026/05/07/introducing-osmprj#4-removing-sources" class="hash-link" aria-label="Direct link to 4. Removing sources" title="Direct link to 4. Removing sources" translate="no">​</a></h4>
+<p>If you want to remove a source from your project, you can use <code>osmprj remove</code>:</p>
+<div class="language-commandline codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-commandline codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#393A34"><span class="token plain">osmprj remove monaco</span><br></div></code></pre></div></div>
+<p>This not only removes the source from <code>osmprj.toml</code> but also from the database to keep things
+in sync and tidy 🧼 🧹.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="how-this-all-works">How this all works<a href="https://travishathaway.github.io/osmprj/blog/2026/05/07/introducing-osmprj#how-this-all-works" class="hash-link" aria-label="Direct link to How this all works" title="Direct link to How this all works" translate="no">​</a></h2>
+<p>Now that I've given the high-level overview of how the tool works, lets take a peek behind
+the curtains to see all the moving pieces.</p>
+<p>Like I alluded to in the introduction, this tools is basically a wrapper around osm2pgsql and
+utilizes the beta version of osm2pgsql-themepark. I've also created a new osm2pgsql-themepark
+theme called <a href="https://github.com/travishathaway/pgosm-themepark" target="_blank" rel="noopener noreferrer" class="">pgosm-themepark</a>, which is
+based off of the <a href="https://pgosm-flex.com/" target="_blank" rel="noopener noreferrer" class="">pgosm-flex</a> project.</p>
+<p>To make everything easy to install, it is all packaged with conda. The dependencies themselves
+are very diverse: osm2pgsql is C/C++ with Python and Lua scripts, plus osmprj itself is written
+in Rust. So, conda is actually a perfect fit for this (and no, I'm not just saying that because
+I'm one of the conda maintainers!).</p>
+<p>Right now, this is being distributed via my own <a href="https://anaconda.org/gis-forge" target="_blank" rel="noopener noreferrer" class="">gis-forge</a> channel,
+but I plan on moving it to the more popular <a href="https://conda-forge.org/" target="_blank" rel="noopener noreferrer" class="">conda-forge</a> channel once
+the project stabilizes and leaves alpha.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="themepark">Themepark<a href="https://travishathaway.github.io/osmprj/blog/2026/05/07/introducing-osmprj#themepark" class="hash-link" aria-label="Direct link to Themepark" title="Direct link to Themepark" translate="no">​</a></h3>
+<p>Right now, osm2pgsql-themepark isn't available in any packaging ecosystem, so part of
+getting everything working required me to make updates to this repository to make it more friendly
+for packagers. This required the following steps:</p>
+<ol>
+<li class="">Create a new <code>lua/</code> directory; this holds all the Lua for files in the package.</li>
+<li class="">Move <code>themes/</code> under this directory in the <code>themepark/</code> module.</li>
+<li class="">Create a Luarocks <code>.rockspec</code> file to hold the metadata for the project enable creating a Lua package.</li>
+<li class="">Create a <a href="https://github.com/travishathaway/gis-forge/blob/main/osm2pgsql-themepark/recipe.yaml" target="_blank" rel="noopener noreferrer" class="">conda recipe</a>
+so this can be published to my gis-forge channel.</li>
+</ol>
+<p>All of these changes can be seen in my fork and branch:</p>
+<ul>
+<li class=""><a href="https://github.com/travishathaway/osm2pgsql-themepark/tree/luarocks" target="_blank" rel="noopener noreferrer" class="">travishathaway/osm2pgsql-themepark<!-- -->:luarocks</a></li>
+</ul>
+<p>I'll be happy to work with the osm2pgsql-themepark maintainers to see if any of these ideas can be
+integrated into the main branch of that project!</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="accessing-themes-in-osmprj">Accessing themes in osmprj<a href="https://travishathaway.github.io/osmprj/blog/2026/05/07/introducing-osmprj#accessing-themes-in-osmprj" class="hash-link" aria-label="Direct link to Accessing themes in osmprj" title="Direct link to Accessing themes in osmprj" translate="no">​</a></h3>
+<p>One final piece was missing in order to get themes wired up correctly in osmprj. In osm2pgsql-themepark,
+there's a directory called <a href="https://github.com/osm2pgsql-dev/osm2pgsql-themepark/tree/master/config" target="_blank" rel="noopener noreferrer" class=""><code>config/</code></a>
+containing files serving as entry points to their respective themes. Because these
+were not included in the Lua package I mentioned above (and they shouldn't be because they're meant to be user
+defined configurations), I copied some (but not all) to osmprj in my own <a href="https://github.com/travishathaway/osmprj/tree/main/themes" target="_blank" rel="noopener noreferrer" class=""><code>themes/</code></a>
+directory. There are several different built-in themes for users (e.g. "shortbread" and "pgosm") and
+users also have the ability to add their own by appending to the <code>OSMPRJ_THEME_PATH</code> environment variable.</p>
+<p>To see a full list of all available themes, I've created the following command:</p>
+<div class="language-commandline codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-commandline codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#393A34"><span class="token plain">osmprj themes list</span><br></div></code></pre></div></div>
+<p>I decided to give each osmprj theme its own small <code>theme.toml</code> so theme creators can easily add
+metadata to them. These themes also support custom SQL scripts that can be run post-import.</p>
+<p>Here's an example of what a <code>theme.toml</code> looks like:</p>
+<div class="language-toml codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-toml codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#393A34"><span class="token key property" style="color:#36acaa">name</span><span class="token plain">        </span><span class="token punctuation" style="color:#393A34">=</span><span class="token plain"> </span><span class="token string" style="color:#e3116c">"shortbread"</span><span class="token plain"></span><br></div><div class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token key property" style="color:#36acaa">version</span><span class="token plain">     </span><span class="token punctuation" style="color:#393A34">=</span><span class="token plain"> </span><span class="token string" style="color:#e3116c">"0.1.0"</span><span class="token plain"></span><br></div><div class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token key property" style="color:#36acaa">description</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">=</span><span class="token plain"> </span><span class="token string" style="color:#e3116c">"Shortbread theme"</span><span class="token plain"></span><br></div><div class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token key property" style="color:#36acaa">type</span><span class="token plain">        </span><span class="token punctuation" style="color:#393A34">=</span><span class="token plain"> </span><span class="token string" style="color:#e3116c">"themepark"</span><span class="token plain"></span><br></div><div class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token key property" style="color:#36acaa">entry</span><span class="token plain">       </span><span class="token punctuation" style="color:#393A34">=</span><span class="token plain"> </span><span class="token string" style="color:#e3116c">"config.lua"</span><br></div></code></pre></div></div>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="motivation">Motivation<a href="https://travishathaway.github.io/osmprj/blog/2026/05/07/introducing-osmprj#motivation" class="hash-link" aria-label="Direct link to Motivation" title="Direct link to Motivation" translate="no">​</a></h2>
+<p>There are already so many tools for managing OpenStreetMap data out there. Why does the world
+need another one? I believe that <code>osm2pgsql</code> itself is a great tool and does its job incredibly
+well, but it lacks important features that I have come to love and appreciate by working with
+package management tools like <a href="https://npmjs.com/" target="_blank" rel="noopener noreferrer" class="">npm</a>, <a href="https://docs.astral.sh/uv/" target="_blank" rel="noopener noreferrer" class="">uv</a> and
+<a href="https://pixi.prefix.dev/latest/" target="_blank" rel="noopener noreferrer" class="">pixi</a>. On top of managing your development environment,
+those package managers also handle downloading and caching packages while focusing on delivering
+an amazing user experience and being feature rich. I feel like osm2pgsql should be seen as just
+a single building block to create an even better user experience.</p>
+<p>While looking for such a tool, I came across <a href="https://pgosm-flex.com/" target="_blank" rel="noopener noreferrer" class="">PgOSM Flex</a>. This tool
+handles downloading data from Geofabrik and also provides a very easy to reason about schema
+for working with OSM data in the database. The downside is that this tool needs to be run
+inside a Docker container. While using it, I had problems on computers with lower
+resources, which is what led me to <a href="https://github.com/travishathaway/pgosm-flex/tree/experimental-no-docker-setup" target="_blank" rel="noopener noreferrer" class="">forking it</a>
+and trying to create a version of it that could be run entirely within conda environments.
+But, I ended up getting pretty carried away with this fork, and before I knew it, I had
+changed so much, I figured it would be better to just write my own tool (and thus the
+<a href="https://xkcd.com/927/" target="_blank" rel="noopener noreferrer" class="">xkcd: 927</a> cycle begins once more).</p>
+<p>While experimenting with PgOSM-Flex, I came up with the idea to add a project configuration
+file to the tool (something else I borrowed from popular package managers). With this configuration
+file, I envisioned something that could be checked in alongside the code you write to do
+your data analysis so that it becomes easy to share and duplicate your work across different
+computers and environments.</p>
+<p>My final reason for creating this is that I genuinely like writing developer tools. It is
+what brings me so much joy being a conda maintainer, and I wanted to begin using this experience
+in different problem domains. I really enjoy working with GIS and the types of analysis you
+can conduct, especially with OSM data, so combing these two interests with this project felt
+like a natural fit.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="whats-next">What's next?<a href="https://travishathaway.github.io/osmprj/blog/2026/05/07/introducing-osmprj#whats-next" class="hash-link" aria-label="Direct link to What's next?" title="Direct link to What's next?" translate="no">​</a></h2>
+<p>Now that I've reached an initial MVP, I'm going to begin using it myself. If
+you've read this far, maybe you would be interested to help me test it and suggest your own
+features and improvements? Contributors are welcome too!</p>
+<p>I'm hoping I can build something that is at the very least useful for my immediate needs
+and perhaps even useful for others as well. Time will tell...</p>]]></content>
+        <author>
+            <name>Travis Hathaway</name>
+            <uri>https://blog.thath.net</uri>
+        </author>
+        <category label="design" term="design"/>
+    </entry>
+</feed>

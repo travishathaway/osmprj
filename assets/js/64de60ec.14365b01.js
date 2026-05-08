@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunkosmprj_docs=globalThis.webpackChunkosmprj_docs||[]).push([[806],{6619(s){s.exports=JSON.parse('{"tags":[{"label":"design","permalink":"/osmprj/blog/tags/design","count":1}]}')}}]);
