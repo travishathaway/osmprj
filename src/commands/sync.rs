@@ -544,9 +544,12 @@ pub async fn run(
         };
 
         let dest = data_dir.join(pbf_filename(name));
-        let bar = mp.add(ProgressBar::new(0));
+        let bar = mp.add(ProgressBar::no_length());
         bar.set_style(bar_style.clone());
-        bar.set_message(format!("{name}.osm.pbf"));
+        bar.set_message(output::truncate_message(
+            &format!("{name}.osm.pbf"),
+            output::progress_bar_msg_width(),
+        ));
 
         let http = Arc::clone(&http);
         let name = (*name).clone();

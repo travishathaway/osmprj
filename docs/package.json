@@ -16,8 +16,8 @@
   "dependencies": {
     "@docusaurus/core": "3.10.1",
     "@docusaurus/preset-classic": "3.10.1",
-    "@fontsource/pt-mono": "^5.2.8",
     "@fontsource/source-sans-3": "^5.2.9",
+    "@fontsource/space-mono": "^5.2.9",
     "@mdx-js/react": "^3.0.0",
     "asciinema-player": "^3.9.0",
     "clsx": "^2.0.0",
