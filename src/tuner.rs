@@ -5,6 +5,7 @@ pub struct TunerInput {
     pub system_ram_gb: f64,
     pub pbf_size_gb: f64,
     pub ssd: bool,
+    pub concurrent_imports: usize,
     pub database_url: String,
     pub effective_schema: String,
     pub pbf_path: PathBuf,
@@ -23,8 +24,9 @@ pub fn use_flat_nodes(pbf_size_gb: f64, ssd: bool) -> bool {
     (pbf_size_gb >= 8.0 && ssd) || pbf_size_gb >= 30.0
 }
 
-pub fn get_cache_mb(pbf_size_gb: f64, system_ram_gb: f64) -> u32 {
-    let cache_max_gb = system_ram_gb * 0.66;
+pub fn get_cache_mb(pbf_size_gb: f64, system_ram_gb: f64, concurrent_imports: usize) -> u32 {
+    let per_import_ram_gb = system_ram_gb / concurrent_imports.max(1) as f64;
+    let cache_max_gb = per_import_ram_gb * 0.66;
     let slim_cache_gb = 0.75 * (1.0 + 2.5 * pbf_size_gb);
     let chosen = slim_cache_gb.min(cache_max_gb);
     (chosen * 1024.0) as u32
@@ -42,7 +44,11 @@ pub fn build_command(input: &TunerInput) -> Vec<String> {
         args.push(format!("--flat-nodes={}", nodes_path.display()));
         args.push("--cache=0".to_string());
     } else {
-        let cache = get_cache_mb(input.pbf_size_gb, input.system_ram_gb);
+        let cache = get_cache_mb(
+            input.pbf_size_gb,
+            input.system_ram_gb,
+            input.concurrent_imports,
+        );
         args.push(format!("--cache={cache}"));
     }
 
@@ -68,6 +74,7 @@ mod tests {
             system_ram_gb: ram_gb,
             pbf_size_gb: pbf_gb,
             ssd,
+            concurrent_imports: 1,
             database_url: "postgres://localhost/osm".to_string(),
             effective_schema: "albania".to_string(),
             pbf_path: PathBuf::from("/data/albania.osm.pbf"),
@@ -108,7 +115,7 @@ mod tests {
     #[test]
     fn cache_capped_by_ram() {
         // 100 GB PBF, only 8 GB RAM → cache capped at 0.66 * 8 * 1024 = 5406 MB
-        let cache = get_cache_mb(100.0, 8.0);
+        let cache = get_cache_mb(100.0, 8.0, 1);
         let cap = (8.0 * 0.66 * 1024.0) as u32;
         let uncapped = (0.75 * (1.0 + 250.0) * 1024.0) as u32;
         assert!(cache <= cap);
@@ -139,5 +146,57 @@ mod tests {
         let cmd = build_command(&input(0.5, 16.0, true));
         assert!(cmd.iter().any(|a| a.starts_with("--database=")));
         assert!(cmd.iter().any(|a| a.starts_with("--schema=")));
+    }
+
+    #[test]
+    fn concurrent_imports_halves_cache_budget() {
+        // With concurrent_imports=1, the full RAM budget is used.
+        let cache_single = get_cache_mb(0.5, 16.0, 1);
+        // With concurrent_imports=2, each import gets half the RAM.
+        let cache_double = get_cache_mb(0.5, 16.0, 2);
+        // The double-concurrent cache should be roughly half the single cache
+        // (both are slim_cache-limited here, so they should be equal — but let's
+        // also verify the cap case, which differs).
+        // For 100 GB PBF on 16 GB RAM: slim_cache >> cache_max, so cap applies.
+        let capped_single = get_cache_mb(100.0, 16.0, 1);
+        let capped_double = get_cache_mb(100.0, 16.0, 2);
+        assert!(
+            capped_double < capped_single,
+            "double-concurrent cap ({capped_double}) should be less than single ({capped_single})"
+        );
+        // capped_double should be approximately half of capped_single
+        let ratio = capped_single as f64 / capped_double as f64;
+        assert!(
+            (ratio - 2.0).abs() < 0.1,
+            "ratio should be ~2.0, got {ratio}"
+        );
+    }
+
+    #[test]
+    fn concurrent_imports_quarters_cache_budget() {
+        // 100 GB PBF on 32 GB RAM: always RAM-capped regardless of concurrency.
+        let capped_single = get_cache_mb(100.0, 32.0, 1);
+        let capped_quad = get_cache_mb(100.0, 32.0, 4);
+        // Four concurrent imports should each get one-quarter of the RAM budget.
+        let ratio = capped_single as f64 / capped_quad as f64;
+        assert!(
+            (ratio - 4.0).abs() < 0.1,
+            "ratio should be ~4.0, got {ratio}"
+        );
+    }
+
+    #[test]
+    fn concurrent_imports_cache_capped_by_divided_budget() {
+        // 100 GB PBF on 8 GB RAM with 2 concurrent imports:
+        // per-import budget = 4 GB, cache_max = 4 * 0.66 = 2.64 GB
+        let cache = get_cache_mb(100.0, 8.0, 2);
+        let expected_cap = (4.0_f64 * 0.66 * 1024.0) as u32;
+        assert_eq!(
+            cache, expected_cap,
+            "cache should be capped by per-import budget"
+        );
+        // And it should be less than the full-RAM cap
+        let cache_full = get_cache_mb(100.0, 8.0, 1);
+        assert!(cache < cache_full);
     }
 }

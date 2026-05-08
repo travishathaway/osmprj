@@ -64,6 +64,14 @@ pub fn progress_bar_style() -> ProgressStyle {
     }
 }
 
+/// Style for a download that is queued but waiting for a semaphore permit.
+/// Shows a dim spinner and "Pending <name>" with no progress bar or byte counts.
+pub fn pending_style() -> ProgressStyle {
+    ProgressStyle::with_template("  {spinner:.dim} {msg}")
+        .unwrap()
+        .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
+}
+
 pub fn spinner_style() -> ProgressStyle {
     ProgressStyle::with_template("  {spinner} {msg}")
         .unwrap()

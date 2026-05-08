@@ -41,6 +41,11 @@ pub struct ProjectSettings {
     pub log_dir: Option<String>,
     pub ssd: Option<bool>,
     pub max_diff_size_mb: Option<u32>,
+    /// Maximum number of PBF downloads to run concurrently. Defaults to 3.
+    pub max_concurrent_downloads: Option<usize>,
+    /// Maximum number of osm2pgsql import pipelines to run concurrently. Defaults to 1.
+    /// Each import holds one PostgreSQL connection and a share of system RAM.
+    pub max_concurrent_imports: Option<usize>,
 }
 
 impl ProjectSettings {
@@ -64,6 +69,49 @@ impl ProjectSettings {
 
     pub fn effective_ssd(&self) -> bool {
         self.ssd.unwrap_or(true)
+    }
+
+    pub fn effective_max_concurrent_downloads(&self) -> usize {
+        self.max_concurrent_downloads.unwrap_or(3)
+    }
+
+    pub fn effective_max_concurrent_imports(&self) -> usize {
+        self.max_concurrent_imports.unwrap_or(1)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn effective_max_concurrent_downloads_default() {
+        let s = ProjectSettings::default();
+        assert_eq!(s.effective_max_concurrent_downloads(), 3);
+    }
+
+    #[test]
+    fn effective_max_concurrent_downloads_configured() {
+        let s = ProjectSettings {
+            max_concurrent_downloads: Some(5),
+            ..Default::default()
+        };
+        assert_eq!(s.effective_max_concurrent_downloads(), 5);
+    }
+
+    #[test]
+    fn effective_max_concurrent_imports_default() {
+        let s = ProjectSettings::default();
+        assert_eq!(s.effective_max_concurrent_imports(), 1);
+    }
+
+    #[test]
+    fn effective_max_concurrent_imports_configured() {
+        let s = ProjectSettings {
+            max_concurrent_imports: Some(4),
+            ..Default::default()
+        };
+        assert_eq!(s.effective_max_concurrent_imports(), 4);
     }
 }
 

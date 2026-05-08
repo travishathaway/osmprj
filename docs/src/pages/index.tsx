@@ -3,6 +3,7 @@ import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import Layout from '@theme/Layout';
+import { Highlight, themes } from "prism-react-renderer"
 
 // ─── Feature card data ────────────────────────────────────────────────────────
 
@@ -73,6 +74,43 @@ function FeatureCards() {
   );
 }
 
+function ShellCodeBlock(code) {
+  return (
+      <Highlight code={code.trim()} language="bash" theme={themes.github}>
+        {({ className, style, tokens, getLineProps, getTokenProps }) => (
+            <pre
+                className={className}
+                style={{
+                  ...style,
+                  padding: "1rem",
+                  borderRadius: "0.5rem",
+                  overflowX: "auto",
+                }}
+            >
+          {tokens.map((line, i) => (
+              <div key={i} {...getLineProps({ line })}>
+                {line.map((token, key) => (
+                    <span key={key} {...getTokenProps({ token })} />
+                ))}
+              </div>
+          ))}
+        </pre>
+        )}
+      </Highlight>
+  );
+}
+
+function InstallCard() {
+  let code = `curl -fsSl https://example.com/install.sh | bash`
+  return (
+      <section className="install">
+        <h2>Install</h2>
+        <p>Install</p>
+        <ShellCodeBlock code={code} />
+      </section>
+  )
+}
+
 function Demo() {
   return (
     <section className="demo">
@@ -135,6 +173,7 @@ export default function Home(): React.JSX.Element {
     >
       <main>
         <Hero />
+        <InstallCard />
         <FeatureCards />
         <Demo />
       </main>
