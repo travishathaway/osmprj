@@ -20,7 +20,7 @@
 
 /* Target prose/article text directly without affecting headings */
 article, .markdown {
-  font-size: 20px;
+  font-size: 19px;
 }
 
 /* Docusaurus color tokens */
@@ -32,7 +32,7 @@ article, .markdown {
   --ifm-color-primary-light: #568421;
   --ifm-color-primary-lighter: #5A8A23;
   --ifm-color-primary-lightest: #659B29;
-  --ifm-code-font-size: 95%;
+  --ifm-code-font-size: 80%;
   --ifm-font-size-base: 18px;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
   --ifm-heading-font-family: 'Space Mono', ui-monospace, 'Cascadia Code', 'Menlo', monospace;

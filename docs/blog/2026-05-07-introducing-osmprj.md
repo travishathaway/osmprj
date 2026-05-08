@@ -5,17 +5,17 @@ authors: travishathaway
 tags: [design]
 ---
 
-I'm excited to announce the alpha release of a new tool for managing OpenStreetMap (OSM) data
-with PostgreSQL: osmprj. Osmprj aims to reduce the hassle of manually donwloading
-and managing OSM data dumps by providing workflows similar to modern package managers
-like [uv](https://docs.astral.sh/uv/), [Cargo](https://crates.io), [npm](https://npmjs.com) or
+I'm excited to announce the alpha release of a new tool for managing [OpenStreetMap](https://openstreetmap.org)
+(OSM) data with [PostgreSQL](https://postgresql.org): osmprj. This tool aims to reduce the hassle of
+working with OSM data in PostgreSQL by providing workflows similar to modern package managers like
+[uv](https://docs.astral.sh/uv/), [Cargo](https://crates.io), [npm](https://npmjs.com) or
 [pixi](https://pixi.prefix.dev/latest) It's built on top of the tried and true [osm2pgsql](https://osm2pgsql.org)
 utility and utilizes the brand  new [osm2pgsql-themepark](https://osm2pgsql.org/themepark)
-framework that offers an endless posibility schema layouts for your OSM data.
+framework that offers an endless posibility of schema layouts for your OSM data.
 
-In this post, I'll give you all an overview of how this tool works, some background
-on how/why I created and what I wish to accomplish in the future, including some ideas
-I have for contributing back to and improving osm2pgsql-themepark.
+In this post, I give you an overview of how this tool works, some background
+on how/why I created it and what I wish to accomplish in the future, including some ideas
+I have for contributing back to osm2pgsql-themepark.
 
 <!-- truncate -->
 
@@ -35,17 +35,19 @@ Or with [conda](https://docs.conda.io):
 conda create -n osmprj -c gis-forge -c conda-forge osmprj
 ```
 
-### Initializing your project
+### Basic workflow
 
-With osmprj, you can download and set up a PostgreSQL database with just a few commands:
+With osmprj, you can download and set up a PostgreSQL database with just a few commands.
+
+#### 1. Initializing the project
 
 ```commandline
 osmprj init --db postgresql://user@localhost:5432/db
 ```
 
-### Adding data sources
+#### 2. Adding data sources
 
-Once the project is initialized, you add data sources. These are a direct mapping to what's
+Once the project is initialized, you add data sources. These are direct mappings to what's
 available on [Geofabrik](https://downloads.geofabrik.com):
 
 ```commandline
@@ -69,21 +71,21 @@ monaco = { schema = "monaco" }
 bremen = { schema = "bremen", theme = "pgosm" }
 ```
 
-### Syncing to your database
+#### 3. Syncing to your database
 
-With the `osmprj.toml` defined the way we want, now can download the data and import
-into our database:
+With the `osmprj.toml` defined the way you want, you can download and import
+into the data with the following command:
 
 ```commandline
 osmprj sync
 ```
 
-Because replication is enabled via the `osm2pgsql-replication` command, when we want to
-update our database later, we simply just run `osmprj sync` again.
+Because replication is enabled via osm2pgsql, when you want to
+update your database later, you simply run `osmprj sync` again.
 
-### Removing sources
+#### 4. Removing sources
 
-If you to remove a source from your project, you can use `osmprj remove`:
+If you want to remove a source from your project, you can use `osmprj remove`:
 
 ```commandline
 osmprj remove monaco
@@ -110,11 +112,12 @@ in Rust. So, conda is actually a perfect fit for this (and no, I'm not just sayi
 I'm one of the conda maintainers!).
 
 Right now, this is being distributed via my own [gis-forge](https://anaconda.org/gis-forge) channel,
-but I plan on moving it to the more popular [conda-forge](https://conda-forge.org) channel soon.
+but I plan on moving it to the more popular [conda-forge](https://conda-forge.org) channel once
+the project stabilizes and leaves alpha.
 
 ### Themepark
 
-Right now, the osm2pgsql-themepark isn't actually available in any packaging ecosystem, so part of
+Right now, osm2pgsql-themepark isn't available in any packaging ecosystem, so part of
 getting everything working required me to make updates to this repository to make it more friendly
 for packagers. This required the following steps:
 
@@ -128,17 +131,37 @@ All of these changes can be seen in my fork and branch:
 
 - [travishathaway/osm2pgsql-themepark:luarocks](https://github.com/travishathaway/osm2pgsql-themepark/tree/luarocks)
 
-### Themes in osmprj
+I'll be happy to work with the osm2pgsql-themepark maintainers to see if any of these ideas can be
+integrated into the main branch of that project!
+
+### Accessing themes in osmprj
 
 One final piece was missing in order to get themes wired up correctly in osmprj. In osm2pgsql-themepark,
-there's a directory called `config/` that is meant to be the entry point for a using a theme. Because these
-were not included in the Lua package I mentioned above (and they shouldn't be because they meant to be user
-defined configurations), I add them to osmprj in my own `themes/` directory. There are several differnt
-built-in themes for users (e.g. "shortbread" and "pgosm") and users also have the ability to add their
-own by appending to the `OSMPRJ_THEME_PATH` environment variable.
+there's a directory called [`config/`](https://github.com/osm2pgsql-dev/osm2pgsql-themepark/tree/master/config)
+containing files serving as entry points to their respective themes. Because these
+were not included in the Lua package I mentioned above (and they shouldn't be because they're meant to be user
+defined configurations), I copied some (but not all) to osmprj in my own [`themes/`](https://github.com/travishathaway/osmprj/tree/main/themes)
+directory. There are several different built-in themes for users (e.g. "shortbread" and "pgosm") and
+users also have the ability to add their own by appending to the `OSMPRJ_THEME_PATH` environment variable.
 
-I decided to give each osmprj theme its own small `theme.toml` so user can easily add metadata to them.
-These themes also technically support custom SQL scripts that can be run post-import.
+To see a full list of all available themes, I've created the following command:
+
+```commandline
+osmprj themes list
+```
+
+I decided to give each osmprj theme its own small `theme.toml` so theme creators can easily add
+metadata to them. These themes also support custom SQL scripts that can be run post-import.
+
+Here's an example of what a `theme.toml` looks like:
+
+```toml
+name        = "shortbread"
+version     = "0.1.0"
+description = "Shortbread theme"
+type        = "themepark"
+entry       = "config.lua"
+```
 
 ---
 
@@ -149,18 +172,19 @@ need another one? I believe that `osm2pgsql` itself is a great tool and does its
 well, but it lacks important features that I have come to love and appreciate by working with
 package management tools like [npm](https://npmjs.com), [uv](https://docs.astral.sh/uv/) and
 [pixi](https://pixi.prefix.dev/latest/). On top of managing your development environment,
-those package managers also handle downloading packages from a server hosting packages. This
-is the key part that `osm2pgsql` is missing and something I believe should be combined
-into a single tool.
+those package managers also handle downloading and caching packages while focusing on delivering
+an amazing user experience and being feature rich. I feel like osm2pgsql should be seen as just
+a single building block to create an even better user experience.
 
 While looking for such a tool, I came across [PgOSM Flex](https://pgosm-flex.com). This tool
 handles downloading data from Geofabrik and also provides a very easy to reason about schema
 for working with OSM data in the database. The downside is that this tool needs to be run
-inside a Docker container. While using, I especially had problems on computers with lower
+inside a Docker container. While using it, I had problems on computers with lower
 resources, which is what led me to [forking it](https://github.com/travishathaway/pgosm-flex/tree/experimental-no-docker-setup)
 and trying to create a version of it that could be run entirely within conda environments.
 But, I ended up getting pretty carried away with this fork, and before I knew it, I had
-changed so much, I figured it would be better to just write my own tool.
+changed so much, I figured it would be better to just write my own tool (and thus the
+[xkcd: 927](https://xkcd.com/927/) cycle begins once more).
 
 While experimenting with PgOSM-Flex, I came up with the idea to add a project configuration
 file to the tool (something else I borrowed from popular package managers). With this configuration
@@ -168,8 +192,19 @@ file, I envisioned something that could be checked in alongside the code you wri
 your data analysis so that it becomes easy to share and duplicate your work across different
 computers and environments.
 
+My final reason for creating this is that I genuinely like writing developer tools. It is
+what brings me so much joy being a conda maintainer, and I wanted to begin using this experience
+in different problem domains. I really enjoy working with GIS and the types of analysis you
+can conduct, especially with OSM data, so combing these two interests with this project felt
+like a natural fit.
+
 ---
 
 ## What's next?
 
-*TBD*
+Now that I've reached an initial MVP, I'm going to begin using it myself. If
+you've read this far, maybe you would be interested to help me test it and suggest your own
+features and improvements? Contributors are welcome too!
+
+I'm hoping I can build something that is at the very least useful for my immediate needs
+and perhaps even useful for others as well. Time will tell...
