@@ -50,5 +50,5 @@
 
 - [x] 9.1 Run `docker compose up` inside `docs/` and confirm the dev server starts and the site is reachable at `http://localhost:3000/osmprj/`
 - [x] 9.2 Run `npm run build` inside `docs/` (or via `docker compose run docs npm run build`) and confirm it exits 0 with no errors
-- [ ] 9.3 Manually verify the landing page, asciinema player placeholder, and all three docs sections render correctly in a browser
-- [ ] 9.4 Confirm the GitHub Actions workflow file is valid YAML (use `actionlint` or push to a branch and check the Actions tab)
+- [x] 9.3 Manually verify the landing page, asciinema player placeholder, and all three docs sections render correctly in a browser
+- [x] 9.4 Confirm the GitHub Actions workflow file is valid YAML (use `actionlint` or push to a branch and check the Actions tab)
