@@ -81,7 +81,7 @@ function FeatureCards() {
       <div className="features__inner">
         <div className="features__head">
           <div className="features__eyebrow">▸ what it does</div>
-          <h2 className="features__title">Three commands. One project file.</h2>
+          <h2 className="features__title">Project management for your OSM data</h2>
         </div>
         <div className="features__grid">
           {features.map(({ num, icon, title, description }) => (
