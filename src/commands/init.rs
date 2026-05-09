@@ -15,8 +15,6 @@ pub fn run(db: Option<String>) -> Result<(), OsmprjError> {
         content.push_str("# database_url = \"postgres://user:pass@localhost/osm\"\n");
     }
 
-    content.push_str("\n# Add sources with: osmprj add <geofabrik-id> --theme <theme>\n");
-
     fs::write("osmprj.toml", &content)?;
     println!("Created osmprj.toml");
     Ok(())
