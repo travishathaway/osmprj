@@ -25,13 +25,13 @@ I have for contributing back to osm2pgsql-themepark.
 
 This easiest way to get osmprj is by installing it as a conda package with [pixi](https://pixi.sh):
 
-```commandline
+```bash
 pixi global install -c gis-forge -c conda-forge osmprj
 ```
 
 Or with [conda](https://docs.conda.io):
 
-```commandline
+```bash
 conda create -n osmprj -c gis-forge -c conda-forge osmprj
 ```
 
@@ -41,7 +41,7 @@ With osmprj, you can download and set up a PostgreSQL database with just a few c
 
 #### 1. Initializing the project
 
-```commandline
+```bash
 osmprj init --db postgresql://user@localhost:5432/db
 ```
 
@@ -50,13 +50,13 @@ osmprj init --db postgresql://user@localhost:5432/db
 Once the project is initialized, you add data sources. These are direct mappings to what's
 available on [Geofabrik](https://downloads.geofabrik.com):
 
-```commandline
+```bash
 osmprj add monaco
 ```
 
 You can also specify a custom schema layout with the `--theme` option:
 
-```commandline
+```bash
 osmprj add bremen --theme pgosm
 ```
 
@@ -76,7 +76,7 @@ bremen = { schema = "bremen", theme = "pgosm" }
 With the `osmprj.toml` defined the way you want, you can download and import
 into the data with the following command:
 
-```commandline
+```bash
 osmprj sync
 ```
 
@@ -87,7 +87,7 @@ update your database later, you simply run `osmprj sync` again.
 
 If you want to remove a source from your project, you can use `osmprj remove`:
 
-```commandline
+```bash
 osmprj remove monaco
 ```
 
@@ -146,7 +146,7 @@ users also have the ability to add their own by appending to the `OSMPRJ_THEME_P
 
 To see a full list of all available themes, I've created the following command:
 
-```commandline
+```bash
 osmprj themes list
 ```
 
