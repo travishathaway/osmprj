@@ -3,27 +3,40 @@ import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import Layout from '@theme/Layout';
+import { Database, Map, Layers } from 'lucide-react';
 
 // ─── Feature card data ────────────────────────────────────────────────────────
 
 const features = [
   {
-    icon: '💾',
-    title: 'Project based workflow',
-    description:
-      'Initialize and save your project configuration right alongside your code for easier sharing.'
+    num: '01',
+    icon: <Database size={22} strokeWidth={1.75} />,
+    title: 'Project-based workflow',
+    description: (
+      <>
+        Initialise, save, and check in{' '}
+        <code>osmprj.toml</code> alongside your code. Share imports the way
+        you share <code>Cargo.toml</code>.
+      </>
+    ),
   },
   {
-    icon: '🏛️',
-    title: 'Solid foundation',
+    num: '02',
+    icon: <Map size={22} strokeWidth={1.75} />,
+    title: 'Built on osm2pgsql',
     description:
-      'Built on top of the tried and true osm2pgsql for reliable imports and performance.'
+      'A wrapper, not a replacement. Auto-tunes flags for your hardware and initialises replication so subsequent syncs are incremental.',
   },
   {
-    icon: '🎨',
-    title: 'Builtin themes',
-    description:
-      'Easily select default themes for a variety database schema layouts that can later be synced.'
+    num: '03',
+    icon: <Layers size={22} strokeWidth={1.75} />,
+    title: 'Nine built-in themes',
+    description: (
+      <>
+        Ship with shortbread, pgosm, osmcarto and more. Add your own by
+        extending <code>OSMPRJ_THEME_PATH</code>.
+      </>
+    ),
   },
 ];
 
@@ -33,26 +46,29 @@ function Hero() {
   const { siteConfig } = useDocusaurusContext();
   return (
     <header className="hero">
-      <div className="col hero__banner-image">
-        <img
-            src="/osmprj/img/osmprj-logo-big.svg"
+      <div className="hero__inner">
+        <div className="hero__logo">
+          <img
+            src="/osmprj/img/osmprj-logo-big.png"
             alt="osmprj logo"
-            className="hero__logo"
-        />
-      </div>
-      <div className="col hero__text">
-        <p className="hero__subtitle">{siteConfig.tagline}</p>
-        <div className="hero__buttons">
-          <Link className="button button--primary button--lg" to="/docs/intro">
-            Get Started
-          </Link>
-          <iframe
-              className="hero__gh-star-btn"
-            src="https://ghbtns.com/github-btn.html?user=travishathaway&repo=osmprj&type=star&count=true&size=large"
-            width={160}
-            height={30}
-            title="GitHub Stars"
           />
+        </div>
+        <div className="hero__text">
+          <div className="hero__eyebrow">alpha · 0.1.0</div>
+          <p className="hero__tag">{siteConfig.tagline}</p>
+          <div className="hero__btns">
+            <Link className="btn btn--primary" to="/docs/intro">
+              Get Started →
+            </Link>
+            <a
+              className="btn btn--secondary"
+              href="https://github.com/travishathaway/osmprj"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              ★ GitHub
+            </a>
+          </div>
         </div>
       </div>
     </header>
@@ -62,63 +78,95 @@ function Hero() {
 function FeatureCards() {
   return (
     <section className="features">
-      {features.map(({ icon, title, description }) => (
-        <div key={title} className="featureCard">
-          <div className="featureCard__icon">{icon}</div>
-          <div className="featureCard__title">{title}</div>
-          <p className="featureCard__description">{description}</p>
+      <div className="features__inner">
+        <div className="features__head">
+          <div className="features__eyebrow">▸ what it does</div>
+          <h2 className="features__title">Three commands. One project file.</h2>
         </div>
-      ))}
+        <div className="features__grid">
+          {features.map(({ num, icon, title, description }) => (
+            <div key={num} className="feature">
+              <div className="feature__corner">{num}</div>
+              <div className="feature__icon">{icon}</div>
+              <h3 className="feature__title">{title}</h3>
+              <p className="feature__desc">{description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
     </section>
   );
 }
 
-function Demo() {
+function TerminalDemo() {
   return (
     <section className="demo">
-      <h2 className="demo__title">See it in action</h2>
-      <div className="demo__player">
-        {/*
-         * The asciinema player must be rendered client-side only — it accesses
-         * browser APIs that are unavailable during SSR/build.
-         *
-         * NOTE: The src path is baseUrl-prefixed. If baseUrl ever changes from
-         * "/osmprj/", update "/osmprj/demo.cast" below to match.
-         * Replace docs/static/demo.cast with your real recording when ready.
-         */}
-        <BrowserOnly>
-          {() => {
-            // asciinema-player is a vanilla JS library — no React component.
-            // We use a ref + useEffect to mount it into a DOM node.
-            function AsciinemaEmbed() {
-              const containerRef = useRef<HTMLDivElement>(null);
-              useEffect(() => {
-                if (!containerRef.current) return;
-                // eslint-disable-next-line @typescript-eslint/no-var-requires
-                require('asciinema-player/dist/bundle/asciinema-player.css');
-                // eslint-disable-next-line @typescript-eslint/no-var-requires
-                const { create } = require('asciinema-player');
-                const player = create(
-                  '/osmprj/osmprj.cast',
-                  containerRef.current,
-                  {
-                    cols: 80,
-                    rows: 20,
-                    autoPlay: false,
-                    loop: false,
-                    speed: 1.5,
-                    theme: 'dracula',
-                    fit: false,
-                    terminalFontSize: 'medium'
-                  }
-                );
-                return () => player.dispose();
-              }, []);
-              return <div ref={containerRef} />;
-            }
-            return <AsciinemaEmbed />;
-          }}
-        </BrowserOnly>
+      <div className="demo__inner">
+        <h2 className="demo__title">See it in action</h2>
+        <p className="demo__subtitle">
+          Spin up a fresh database with Germany&apos;s OSM data in four commands.
+        </p>
+        <div className="term">
+          <div className="term__bar">
+            <div className="term__dots">
+              <span />
+              <span />
+              <span />
+            </div>
+            <span>~/projects/germany-osm</span>
+            <span>bash</span>
+          </div>
+          <pre>{/* prettier-ignore */}<span className="c"># 1. Create an osmprj.toml in the current directory</span>{"\n"}<span className="k">$</span>{" osmprj "}<span className="p">init</span>{" --db "}<span className="s">&quot;postgres://postgres@localhost/osm&quot;</span>{"\n\n"}<span className="c"># 2. Register a Geofabrik region</span>{"\n"}<span className="k">$</span>{" osmprj "}<span className="p">add</span>{" germany --theme "}<span className="s">shortbread</span>{"\n  "}<span className="ok">✓</span>{" schema "}<span className="s">germany</span>{" registered\n\n"}<span className="c"># 3. Check what will be synced</span>{"\n"}<span className="k">$</span>{" osmprj "}<span className="p">status</span>{"\n  database:  postgres://postgres@localhost/osm  "}<span className="ok">✓ connected</span>{"\n\n  source   schema   status\n  ------   ------   ------\n  germany  germany  "}<span className="p">✗</span>{"  — run "}<span className="s">&apos;osmprj sync&apos;</span>{" to import\n\n"}<span className="c"># 4. Download, tune, and import</span>{"\n"}<span className="k">$</span>{" osmprj "}<span className="p">sync</span>{"\n  "}<span className="ok">→</span>{" downloading germany-latest.osm.pbf  ["}<span className="ok">██████████</span>{"] 4.2 GB\n  "}<span className="ok">→</span>{" auto-tuning  --cache=12000 --flat-nodes\n  "}<span className="ok">→</span>{" osm2pgsql --create --slim --output=flex\n  "}<span className="ok">✓</span>{" import complete in 28m 14s"}</pre>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AsciinemaSection() {
+  return (
+    <section className="demo" style={{ paddingTop: 40 }}>
+      <div className="demo__inner">
+        <h2 className="demo__title" style={{ fontSize: 24, marginBottom: 24 }}>
+          Full walkthrough
+        </h2>
+        <div className="demo__player">
+          {/*
+           * The asciinema player must be rendered client-side only — it accesses
+           * browser APIs that are unavailable during SSR/build.
+           */}
+          <BrowserOnly>
+            {() => {
+              function AsciinemaEmbed() {
+                const containerRef = useRef<HTMLDivElement>(null);
+                useEffect(() => {
+                  if (!containerRef.current) return;
+                  // eslint-disable-next-line @typescript-eslint/no-var-requires
+                  require('asciinema-player/dist/bundle/asciinema-player.css');
+                  // eslint-disable-next-line @typescript-eslint/no-var-requires
+                  const { create } = require('asciinema-player');
+                  const player = create(
+                    '/osmprj/osmprj.cast',
+                    containerRef.current,
+                    {
+                      cols: 80,
+                      rows: 20,
+                      autoPlay: false,
+                      loop: false,
+                      speed: 1.5,
+                      theme: 'osmprj',
+                      fit: false,
+                      terminalFontSize: 'medium',
+                    }
+                  );
+                  return () => player.dispose();
+                }, []);
+                return <div ref={containerRef} />;
+              }
+              return <AsciinemaEmbed />;
+            }}
+          </BrowserOnly>
+        </div>
       </div>
     </section>
   );
@@ -129,14 +177,12 @@ function Demo() {
 export default function Home(): React.JSX.Element {
   const { siteConfig } = useDocusaurusContext();
   return (
-    <Layout
-      title={siteConfig.title}
-      description={siteConfig.tagline}
-    >
+    <Layout title={siteConfig.title} description={siteConfig.tagline}>
       <main>
         <Hero />
         <FeatureCards />
-        <Demo />
+        <TerminalDemo />
+        <AsciinemaSection />
       </main>
     </Layout>
   );
