@@ -139,6 +139,7 @@ config.json
 
 # project specific
 osmprj.*
+tests/fixtures/
 postgres/
 reports/
 

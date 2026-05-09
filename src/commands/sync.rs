@@ -109,21 +109,30 @@ async fn download_pbf(
     let mut file = tfs::File::create(dest).await.map_err(OsmprjError::Io)?;
     let mut stream = response;
 
-    while let Some(chunk) = stream
-        .chunk()
-        .await
-        .map_err(|e| OsmprjError::DownloadFailed {
-            url: url.to_string(),
-            message: e.to_string(),
-        })?
-    {
-        tokio::io::AsyncWriteExt::write_all(&mut file, &chunk)
+    let stream_result = async {
+        while let Some(chunk) = stream
+            .chunk()
             .await
-            .map_err(OsmprjError::Io)?;
-        bar.inc(chunk.len() as u64);
+            .map_err(|e| OsmprjError::DownloadFailed {
+                url: url.to_string(),
+                message: e.to_string(),
+            })?
+        {
+            tokio::io::AsyncWriteExt::write_all(&mut file, &chunk)
+                .await
+                .map_err(OsmprjError::Io)?;
+            bar.inc(chunk.len() as u64);
+        }
+        Ok::<(), OsmprjError>(())
+    }
+    .await;
+
+    if stream_result.is_err() {
+        drop(file);
+        let _ = tfs::remove_file(dest).await;
     }
 
-    Ok(())
+    stream_result
 }
 
 // ─── download phase ──────────────────────────────────────────────────────────
