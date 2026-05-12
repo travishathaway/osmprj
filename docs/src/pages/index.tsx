@@ -74,7 +74,7 @@ function FeatureCards() {
   );
 }
 
-function ShellCodeBlock(code) {
+function ShellCodeBlock({ code }: { code: string }) {
   return (
       <Highlight code={code.trim()} language="bash" theme={themes.github}>
         {({ className, style, tokens, getLineProps, getTokenProps }) => (
