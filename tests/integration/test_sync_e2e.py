@@ -3,16 +3,6 @@
 Tests are parametrized over ``SYNC_SOURCES`` — add a new ``pytest.param`` entry
 there to cover additional regions without writing new test functions.
 
-The happy-path tests are marked ``slow`` and ``integration``. They require:
-- A running osm2pgsql binary on PATH
-- ``THEMEPARK_PATH`` pointing to an osm2pgsql-themepark installation
-- ``pg-helper`` available on PATH (provided by the pixi dev environment)
-
-Error-scenario tests are marked ``slow`` only (no database required).
-
-Run with:
-    pixi run --environment dev pytest tests/integration/test_sync_e2e.py -m slow -v
-
 Exclude from the default run with:
     pytest -m "not slow"
 """

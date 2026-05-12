@@ -678,7 +678,7 @@ pub async fn run(
 
     let mut lock = LockFile::load()?;
 
-    // ── Phase 0: Pre-flight HEAD requests + largest-first sort ────────────────
+    // ── Pre-flight HEAD requests + largest-first sort ────────────────
     // Resolve URLs and probe file sizes concurrently so we can sort largest-first.
     // Sources whose HEAD request fails or returns no Content-Length get size=0
     // and sort to the back — this never causes a sync failure.
@@ -729,11 +729,14 @@ pub async fn run(
 
     sort_sources_by_size(&mut sources_to_download);
 
-    // ── Phase 1 + 3b: Unified pipelined download → import loop ───────────────
     // Downloads are capped by dl_sem; imports are capped by imp_sem.
     // Each download task spawns its import task immediately on completion,
     // so imports begin as soon as their PBF is ready without waiting for all
     // downloads to finish.
+    //
+    // Local-path sources (no download needed) are seeded directly into imp_set
+    // here so they run under the same imp_sem and event loop as download-spawned
+    // imports, allowing them to overlap with downloads and other imports.
     //
     // Both JoinSets are polled via tokio::select! so we react to whichever
     // completes next. The `if !set.is_empty()` guards prevent selecting on
@@ -752,6 +755,10 @@ pub async fn run(
         tokio::task::JoinSet::new();
     let mut imp_set: tokio::task::JoinSet<Result<String, (String, OsmprjError)>> =
         tokio::task::JoinSet::new();
+
+    let mut dl_errors: Vec<(String, OsmprjError)> = Vec::new();
+    let mut imp_errors: Vec<(String, OsmprjError)> = Vec::new();
+    let mut imported: Vec<String> = Vec::new();
 
     // Seed all download tasks (semaphore controls how many run at once)
     for (name, url, size) in sources_to_download {
@@ -783,9 +790,69 @@ pub async fn run(
         ));
     }
 
-    let mut dl_errors: Vec<(String, OsmprjError)> = Vec::new();
-    let mut imp_errors: Vec<(String, OsmprjError)> = Vec::new();
-    let mut imported: Vec<String> = Vec::new();
+    // Seed local-path sources directly into imp_set so they are governed by
+    // imp_sem and scheduled alongside download-spawned imports.
+    for name in &fresh_sources {
+        let source = &config.sources[*name];
+        let Some(ref path_str) = source.path else {
+            continue;
+        };
+        let pbf_path = PathBuf::from(path_str);
+
+        let effective_schema = source.effective_schema(name);
+        let srid = source.effective_srid();
+
+        let style_path: Option<PathBuf> = if let Some(ref theme) = source.theme {
+            match theme_registry.find(theme) {
+                Some(plugin) => Some(plugin.lua_path.clone()),
+                None => {
+                    imp_errors.push((
+                        name.to_string(),
+                        OsmprjError::ThemeNotFound {
+                            theme: theme.clone(),
+                        },
+                    ));
+                    continue;
+                }
+            }
+        } else {
+            None
+        };
+
+        let pbf_size_gb = std::fs::metadata(&pbf_path)
+            .map(|m| m.len() as f64 / 1_073_741_824.0)
+            .unwrap_or(0.0);
+
+        let tuner_input = tuner::TunerInput {
+            system_ram_gb: ram_gb,
+            pbf_size_gb,
+            ssd,
+            concurrent_imports: config.project.effective_max_concurrent_imports(),
+            database_url: db_url.to_string(),
+            effective_schema: effective_schema.clone(),
+            pbf_path: pbf_path.clone(),
+            style_path,
+            data_dir: data_dir.clone(),
+            source_name: name.to_string(),
+        };
+        let argv = tuner::build_command(&tuner_input);
+        let sql_files = collect_sql_files(source, &theme_registry);
+
+        imp_set.spawn(import_source(
+            Arc::clone(&imp_sem),
+            Arc::clone(&mp),
+            ImportSourceArgs {
+                source_name: name.to_string(),
+                db_url: db_url.to_string(),
+                effective_schema,
+                srid,
+                argv,
+                sql_files,
+                log_dir: log_dir.clone(),
+                verbose,
+            },
+        ));
+    }
 
     loop {
         if dl_set.is_empty() && imp_set.is_empty() {
@@ -865,74 +932,6 @@ pub async fn run(
         }
     }
 
-    // Also import sources that have a local `path` (no download needed)
-    for name in &fresh_sources {
-        let source = &config.sources[*name];
-        let Some(ref path_str) = source.path else {
-            continue;
-        };
-        let pbf_path = PathBuf::from(path_str);
-
-        let effective_schema = source.effective_schema(name);
-        let srid = source.effective_srid();
-
-        let style_path: Option<PathBuf> = if let Some(ref theme) = source.theme {
-            match theme_registry.find(theme) {
-                Some(plugin) => Some(plugin.lua_path.clone()),
-                None => {
-                    imp_errors.push((
-                        name.to_string(),
-                        OsmprjError::ThemeNotFound {
-                            theme: theme.clone(),
-                        },
-                    ));
-                    continue;
-                }
-            }
-        } else {
-            None
-        };
-
-        let pbf_size_gb = std::fs::metadata(&pbf_path)
-            .map(|m| m.len() as f64 / 1_073_741_824.0)
-            .unwrap_or(0.0);
-
-        let tuner_input = tuner::TunerInput {
-            system_ram_gb: ram_gb,
-            pbf_size_gb,
-            ssd,
-            concurrent_imports: config.project.effective_max_concurrent_imports(),
-            database_url: db_url.to_string(),
-            effective_schema: effective_schema.clone(),
-            pbf_path: pbf_path.clone(),
-            style_path,
-            data_dir: data_dir.clone(),
-            source_name: name.to_string(),
-        };
-        let argv = tuner::build_command(&tuner_input);
-        let sql_files = collect_sql_files(source, &theme_registry);
-
-        match import_source(
-            Arc::clone(&imp_sem),
-            Arc::clone(&mp),
-            ImportSourceArgs {
-                source_name: name.to_string(),
-                db_url: db_url.to_string(),
-                effective_schema,
-                srid,
-                argv,
-                sql_files,
-                log_dir: log_dir.clone(),
-                verbose,
-            },
-        )
-        .await
-        {
-            Ok(n) => imported.push(n),
-            Err((n, e)) => imp_errors.push((n, e)),
-        }
-    }
-
     mp.clear().ok();
 
     // ── Report all errors collected across both phases ────────────────────────
@@ -943,17 +942,28 @@ pub async fn run(
         for (name, e) in &imp_errors {
             eprintln!("  {} {name}: {e}", output::icon_error());
         }
-        return Err(OsmprjError::DownloadFailed {
-            url: String::new(),
+
+        let downloads_str = if dl_errors.len() == 1 {
+            "download"
+        } else {
+            "downloads"
+        };
+        let import_str = if imp_errors.len() == 1 {
+            "import"
+        } else {
+            "imports"
+        };
+
+        return Err(OsmprjError::SyncFailed {
             message: format!(
-                "{} download(s) failed, {} import(s) failed",
+                "{} {downloads_str} failed, {} {import_str} failed",
                 dl_errors.len(),
                 imp_errors.len()
             ),
         });
     }
 
-    // ── Phase 3a: Update sources ──────────────────────────────────────────────
+    // ── Update sources ──────────────────────────────────────────────
     if !update_sources.is_empty() {
         println!("\n  🔄  Updating {} source(s)\n", update_sources.len());
     }
@@ -1018,12 +1028,17 @@ pub async fn run(
         }
     }
 
+    let sources_str = if imported.len() == 1 {
+        "source"
+    } else {
+        "sources"
+    };
     let total_updated = update_sources.len();
     let total_imported = imported.len();
     println!(
         "\n  🌐  Sync complete. {} updated, {} newly imported.",
-        style(format!("{total_updated} source(s)")).green(),
-        style(format!("{total_imported} source(s)")).green(),
+        style(format!("{total_updated} {sources_str}")).green(),
+        style(format!("{total_imported} {sources_str}")).green(),
     );
 
     Ok(())

@@ -1,6 +1,21 @@
-# osmprj
 
-A command-line tool for managing OpenStreetMap data imports into PostgreSQL. It wraps `osm2pgsql` to automate downloading PBF files from Geofabrik, tuning import parameters for your hardware, running incremental updates, and tracking source state across runs.
+<p align="center">
+  <img src="https://travishathaway.github.io/osmprj/img/osmprj-logo-big.png" width="50%">
+</p>
+<p align="center">
+  <em>A friendly, modern tool for managing OpenStreetMap data with PostgreSQL</em>
+</p>
+
+<p align="center">
+  <a href="https://github.com/travishathaway/osmprj/actions?query=workflow%3ACI" target="_blank">
+      <img src="https://github.com/travishathaway/osmprj/workflows/CI/badge.svg" alt="Test">
+  </a>
+  <a href="https://travishathaway.github.io/osmprj" target="_blank">
+      <img src="https://img.shields.io/static/v1?label=Documentation&message=View&color=blue&logo=readme&logoColor=white" alt="Documentation">
+  </a>
+</p>
+
+A command-line tool for managing OpenStreetMap data imports into PostgreSQL that provides a project based workflow similar to tools like [uv](https://docs.astral.sh/uv/), [Cargo](https://crates.io) and [pixi](https://pixi.sh). It wraps `osm2pgsql` to automate downloading PBF files from Geofabrik, running incremental updates, and offers 9 built-in themes you can use to customize the layout of your database.
 
 > [!WARNING]
 > **osmprj is experimental software under active development.** Commands, configuration formats, and behavior may change without notice between versions. It is not yet recommended for production use. Feedback and bug reports are very welcome — see the [Contributing](#contributing) section below.
@@ -26,7 +41,7 @@ A command-line tool for managing OpenStreetMap data imports into PostgreSQL. It 
 
 ## Installation
 
-The best way to install `osmprj` is as a conda package.
+The best way to install `osmprj` is with [pixi](https://pixi.sh).
 
 With `pixi global`:
 
@@ -34,7 +49,7 @@ With `pixi global`:
 pixi global install -c gis-forge -c conda-forge osmprj
 ```
 
-Or by creating a standalone conda environment:
+Or by creating a standalone [conda](https://docs.conda.io) environment:
 
 ```
 conda create -n osmprj -c gis-forge -c conda-forge osmprj

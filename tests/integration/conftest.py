@@ -28,6 +28,7 @@ from _platform import platform_cache_env, platform_cache_subdir
 BINARY = Path(__file__).parents[2] / "target" / "release" / "osmprj"
 DATA_DIR = Path(__file__).parents[1] / "data"
 REPO_ROOT = Path(__file__).parents[2]
+TESTS_THEMES_DIR = Path(__file__).parents[1] / "themes"
 PBF_FIXTURE_DIR = Path(
     os.environ.get("OSMPRJ_TEST_FIXTURE_DIR", REPO_ROOT / "tests" / "fixtures" / "pbf")
 )
@@ -147,12 +148,14 @@ def project(run, tmp_path):
 # ─── PBF fixture cache ────────────────────────────────────────────────────────
 
 _MONACO_REGION = "europe/monaco-latest"
+_LIECHTENSTEIN_REGION = "europe/liechtenstein-latest"
 _GEOFABRIK_BASE = "https://download.geofabrik.de"
+REGIONS = [_MONACO_REGION, _LIECHTENSTEIN_REGION]
 
 
 @pytest.fixture(scope="session")
 def pbf_fixture_cache():
-    """Download the Monaco PBF fixture once and cache it locally.
+    """Download the `REGIONS` pbf files once and cache it locally.
 
     Default location: <repo_root>/tests/fixtures/pbf/ (gitignored).
     Override with OSMPRJ_TEST_FIXTURE_DIR env var.
@@ -160,18 +163,19 @@ def pbf_fixture_cache():
     Also computes and saves a .md5 sidecar in Geofabrik format.
     Returns the cache root Path.
     """
-    pbf_path = PBF_FIXTURE_DIR / f"{_MONACO_REGION}.osm.pbf"
-    md5_path = PBF_FIXTURE_DIR / f"{_MONACO_REGION}.osm.pbf.md5"
+    for region in REGIONS:
+        pbf_path = PBF_FIXTURE_DIR / f"{region}.osm.pbf"
+        md5_path = PBF_FIXTURE_DIR / f"{region}.osm.pbf.md5"
 
-    pbf_path.parent.mkdir(parents=True, exist_ok=True)
+        pbf_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if not pbf_path.exists():
-        url = f"{_GEOFABRIK_BASE}/{_MONACO_REGION}.osm.pbf"
-        urllib.request.urlretrieve(url, pbf_path)  # noqa: S310
+        if not pbf_path.exists():
+            url = f"{_GEOFABRIK_BASE}/{region}.osm.pbf"
+            urllib.request.urlretrieve(url, pbf_path)  # noqa: S310
 
-    if not md5_path.exists():
-        digest = hashlib.md5(pbf_path.read_bytes(), usedforsecurity=False).hexdigest()
-        md5_path.write_text(f"{digest}  {pbf_path.name}\n")
+        if not md5_path.exists():
+            digest = hashlib.md5(pbf_path.read_bytes(), usedforsecurity=False).hexdigest()
+            md5_path.write_text(f"{digest}  {pbf_path.name}\n")
 
     return PBF_FIXTURE_DIR
 
@@ -180,7 +184,7 @@ def pbf_fixture_cache():
 
 
 class _Injection:
-    """Holds a single injected response behaviour and its remaining count."""
+    """Holds a single injected response behavior and its remaining count."""
 
     __slots__ = ("bytes_to_send", "kind", "remaining", "status")
 
@@ -374,8 +378,7 @@ def run_cmd_with_server(binary, geofabrik_cache_with_server):
     env_key, env_val = platform_cache_env(geofabrik_cache_with_server)
 
     def _run(*args, cwd, check=True):
-        env = os.environ.copy()
-        env[env_key] = env_val
+        env = {**os.environ.copy(), env_key: env_val}
         result = subprocess.run(
             [str(binary), *args], cwd=cwd, capture_output=True, text=True, check=False, env=env
         )
@@ -393,3 +396,19 @@ def reset_server_errors(download_server):
     """Reset all injected server errors after the test completes."""
     yield
     download_server.reset_errors()
+
+
+@pytest.fixture(autouse=True)
+def tests_themes_dir(monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Path to tests/themes/, containing test-only theme packages.
+
+    We automatically set this for the entire test suite so we can test themes
+    that aren't included in our default set (e.g. themes that are broken or cause
+    various errors).
+    """
+    existing = os.environ.get("OSMPRJ_THEME_PATH", "")
+    extended = str(TESTS_THEMES_DIR) + (os.pathsep + existing if existing else "")
+
+    monkeypatch.setenv("OSMPRJ_THEME_PATH", extended)
+
+    return TESTS_THEMES_DIR
