@@ -81,7 +81,7 @@ function FeatureCards() {
       <div className="features__inner">
         <div className="features__head">
           <div className="features__eyebrow">▸ what it does</div>
-          <h2 className="features__title">Three commands. One project file.</h2>
+          <h2 className="features__title">Project management for your OSM data</h2>
         </div>
         <div className="features__grid">
           {features.map(({ num, icon, title, description }) => (
@@ -116,7 +116,7 @@ function TerminalDemo() {
             <span>~/projects/germany-osm</span>
             <span>bash</span>
           </div>
-          <pre>{/* prettier-ignore */}<span className="c"># 1. Create an osmprj.toml in the current directory</span>{"\n"}<span className="k">$</span>{" osmprj "}<span className="p">init</span>{" --db "}<span className="s">&quot;postgres://postgres@localhost/osm&quot;</span>{"\n\n"}<span className="c"># 2. Register a Geofabrik region</span>{"\n"}<span className="k">$</span>{" osmprj "}<span className="p">add</span>{" germany --theme "}<span className="s">shortbread</span>{"\n  "}<span className="ok">✓</span>{" schema "}<span className="s">germany</span>{" registered\n\n"}<span className="c"># 3. Check what will be synced</span>{"\n"}<span className="k">$</span>{" osmprj "}<span className="p">status</span>{"\n  database:  postgres://postgres@localhost/osm  "}<span className="ok">✓ connected</span>{"\n\n  source   schema   status\n  ------   ------   ------\n  germany  germany  "}<span className="p">✗</span>{"  — run "}<span className="s">&apos;osmprj sync&apos;</span>{" to import\n\n"}<span className="c"># 4. Download, tune, and import</span>{"\n"}<span className="k">$</span>{" osmprj "}<span className="p">sync</span>{"\n  "}<span className="ok">→</span>{" downloading germany-latest.osm.pbf  ["}<span className="ok">██████████</span>{"] 4.2 GB\n  "}<span className="ok">→</span>{" auto-tuning  --cache=12000 --flat-nodes\n  "}<span className="ok">→</span>{" osm2pgsql --create --slim --output=flex\n  "}<span className="ok">✓</span>{" import complete in 28m 14s"}</pre>
+          <pre>{/* prettier-ignore */}<span className="c"># 1. Create an osmprj.toml in the current directory</span>{"\n"}<span className="k">$</span>{" osmprj "}<span className="p">init</span>{" --db "}<span className="s">&quot;postgres://postgres@localhost/osm&quot;</span>{"\n\n"}<span className="c"># 2. Register a Geofabrik region</span>{"\n"}<span className="k">$</span>{" osmprj "}<span className="p">add</span>{" germany --theme "}<span className="s">shortbread</span>{"\n  "}<span className="ok">✓</span>{" schema "}<span className="s">germany</span>{" registered\n\n"}<span className="c"># 3. Check what will be synced</span>{"\n"}<span className="k">$</span>{" osmprj "}<span className="p">status</span>{"\n  database:  postgres://postgres@localhost/osm  "}<span className="ok">✓ connected</span>{"\n\n  source   schema   status\n  ------   ------   ------\n  germany  germany  "}<span className="p">✗</span>{"  — run "}<span className="s">&apos;osmprj sync&apos;</span>{" to import\n\n"}<span className="c"># 4. Download and import</span>{"\n"}<span className="k">$</span>{" osmprj "}<span className="p">sync</span>{"\n  "}<span className="ok">→</span>{" downloading germany-latest.osm.pbf  ["}<span className="ok">██████████</span>{"] 4.2 GB\n  "}</pre>
         </div>
       </div>
     </section>
