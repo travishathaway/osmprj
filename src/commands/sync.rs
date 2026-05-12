@@ -16,6 +16,9 @@ use tokio::fs as tfs;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::sync::Semaphore;
 
+/// Return type for an import task: source name plus an optional post-process warning.
+type ImportResult = Result<(String, Option<OsmprjError>), (String, OsmprjError)>;
+
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 fn which(binary: &str) -> bool {
@@ -416,7 +419,7 @@ async fn import_source(
     imp_sem: Arc<Semaphore>,
     mp: Arc<MultiProgress>,
     args: ImportSourceArgs,
-) -> Result<String, (String, OsmprjError)> {
+) -> ImportResult {
     let name = &args.source_name;
     let err = |e| (name.clone(), e);
 
@@ -452,18 +455,21 @@ async fn import_source(
         })?;
 
     // ── Post-processing SQL ───────────────────────────────────────────────────
+    let mut pp_warning: Option<OsmprjError> = None;
     if !args.sql_files.is_empty() {
         spinner.set_message(format!("Post-processing {name}..."));
         match db::connect(&args.db_url).await {
             Err(e) => {
-                spinner.finish_with_message(format!(
-                    "{} {name} post-processing skipped (no DB connection)",
-                    output::icon_warn()
-                ));
+                spinner.set_message(format!("Post-processing {name} skipped (no DB)..."));
                 eprintln!(
                     "  {} {name}: could not connect for post-processing: {e}",
                     output::icon_warn()
                 );
+                pp_warning = Some(OsmprjError::PostProcessFailed {
+                    source_name: name.clone(),
+                    file: String::new(),
+                    message: e.to_string(),
+                });
             }
             Ok(client) => {
                 match run_postprocess(&client, name, &args.effective_schema, &args.sql_files).await
@@ -472,11 +478,10 @@ async fn import_source(
                         // spinner message will update to replication step below
                     }
                     Err(e) => {
-                        spinner.finish_with_message(format!(
-                            "{} {name} post-processing failed",
-                            output::icon_warn()
-                        ));
+                        spinner
+                            .set_message(format!("Post-processing {name} failed, continuing..."));
                         eprintln!("  {e}");
+                        pp_warning = Some(e);
                     }
                 }
             }
@@ -506,7 +511,7 @@ async fn import_source(
 
     spinner.finish_with_message(format!("{} {name} imported", output::icon_success()));
 
-    Ok(name.clone())
+    Ok((name.clone(), pp_warning))
 }
 
 // ─── replication update ───────────────────────────────────────────────────────
@@ -588,6 +593,7 @@ async fn replication_update(
 pub async fn run(
     requested_sources: Vec<String>,
     verbose: bool,
+    postprocess_only: bool,
     config: &ProjectConfig,
 ) -> Result<(), OsmprjError> {
     // Validate source filter
@@ -602,6 +608,84 @@ pub async fn run(
                 names: unknown.join(", "),
             });
         }
+    }
+
+    // ── --postprocess-only early-return branch ────────────────────────────────
+    // Re-run post-processing SQL for each source without downloading or importing.
+    // osm2pgsql / osm2pgsql-replication are not required.
+    if postprocess_only {
+        let db_url = config
+            .project
+            .database_url
+            .as_deref()
+            .ok_or(OsmprjError::NoDatabaseUrl)?;
+
+        let theme_registry = ThemeRegistry::build();
+
+        let sources_to_process: Vec<(&String, &SourceConfig)> = config
+            .sources
+            .iter()
+            .filter(|(name, _)| requested_sources.is_empty() || requested_sources.contains(name))
+            .collect();
+
+        let mut pp_errors: Vec<(String, OsmprjError)> = Vec::new();
+
+        for (name, source) in &sources_to_process {
+            let sql_files = collect_sql_files(source, &theme_registry);
+            if sql_files.is_empty() {
+                println!(
+                    "  {} {name}: no post-processing SQL, skipping",
+                    output::icon_skip()
+                );
+                continue;
+            }
+
+            let effective_schema = source.effective_schema(name);
+
+            match db::connect(db_url).await {
+                Err(e) => {
+                    eprintln!(
+                        "  {} {name}: could not connect for post-processing: {e}",
+                        output::icon_warn()
+                    );
+                    pp_errors.push((
+                        name.to_string(),
+                        OsmprjError::PostProcessFailed {
+                            source_name: name.to_string(),
+                            file: String::new(),
+                            message: e.to_string(),
+                        },
+                    ));
+                }
+                Ok(client) => {
+                    match run_postprocess(&client, name, &effective_schema, &sql_files).await {
+                        Ok(()) => {
+                            println!(
+                                "  {} {name}: post-processing complete",
+                                output::icon_success()
+                            );
+                        }
+                        Err(e) => {
+                            eprintln!("  {} {name}: {e}", output::icon_error());
+                            pp_errors.push((name.to_string(), e));
+                        }
+                    }
+                }
+            }
+        }
+
+        if !pp_errors.is_empty() {
+            let s = if pp_errors.len() == 1 {
+                "source"
+            } else {
+                "sources"
+            };
+            return Err(OsmprjError::SyncFailed {
+                message: format!("post-processing failed for {} {s}", pp_errors.len()),
+            });
+        }
+
+        return Ok(());
     }
 
     for bin in ["osm2pgsql", "osm2pgsql-replication"] {
@@ -753,11 +837,11 @@ pub async fn run(
 
     let mut dl_set: tokio::task::JoinSet<Result<DownloadResult, (String, OsmprjError)>> =
         tokio::task::JoinSet::new();
-    let mut imp_set: tokio::task::JoinSet<Result<String, (String, OsmprjError)>> =
-        tokio::task::JoinSet::new();
+    let mut imp_set: tokio::task::JoinSet<ImportResult> = tokio::task::JoinSet::new();
 
     let mut dl_errors: Vec<(String, OsmprjError)> = Vec::new();
     let mut imp_errors: Vec<(String, OsmprjError)> = Vec::new();
+    let mut pp_warnings: Vec<(String, OsmprjError)> = Vec::new();
     let mut imported: Vec<String> = Vec::new();
 
     // Seed all download tasks (semaphore controls how many run at once)
@@ -925,7 +1009,11 @@ pub async fn run(
 
             Some(result) = imp_set.join_next(), if !imp_set.is_empty() => {
                 match result.expect("import task panicked") {
-                    Ok(name) => imported.push(name),
+                    Ok((name, None)) => imported.push(name),
+                    Ok((name, Some(w))) => {
+                        imported.push(name.clone());
+                        pp_warnings.push((name, w));
+                    }
                     Err((name, e)) => imp_errors.push((name, e)),
                 }
             }
@@ -933,6 +1021,19 @@ pub async fn run(
     }
 
     mp.clear().ok();
+
+    // ── Report post-processing warnings (soft failures — do not exit non-zero) ─
+    if !pp_warnings.is_empty() {
+        eprintln!();
+        for (name, e) in &pp_warnings {
+            eprintln!("  {} {name}: {e}", output::icon_warn());
+        }
+        eprintln!(
+            "  {} {} post-processing warning(s); re-run with --postprocess-only to retry",
+            output::icon_warn(),
+            pp_warnings.len()
+        );
+    }
 
     // ── Report all errors collected across both phases ────────────────────────
     if !dl_errors.is_empty() || !imp_errors.is_empty() {

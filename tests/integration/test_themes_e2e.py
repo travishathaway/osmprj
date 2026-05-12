@@ -105,7 +105,7 @@ def theme_state(request, binary, pg_e2e, tmp_path_factory):
             ).fetchall()
             geometry_srids = [r[0] for r in rows]
 
-    return {
+    yield {
         "geofabrik_id": geofabrik_id,
         "schema": schema,
         "theme": theme,
@@ -115,6 +115,8 @@ def theme_state(request, binary, pg_e2e, tmp_path_factory):
         "geometry_srids": geometry_srids,
         "srid": srid,
     }
+
+    _run("remove", "--force", geofabrik_id, cwd=project, check=False)
 
 
 def test_sync_succeeds(theme_state):

@@ -137,3 +137,55 @@ directory.
 #### Scenario: Cleanup failure is silently ignored
 - **WHEN** `remove_file` fails (e.g., file already gone)
 - **THEN** the original stream error is returned and no secondary error is reported
+
+### Requirement: Post-processing failures are soft warnings
+Post-processing SQL failures — whether caused by a DB connect error or by SQL execution errors — SHALL NOT fail the import task. The import pipeline SHALL continue to the replication init step after a post-processing failure. The failure SHALL be recorded as a warning, printed to stderr, and surfaced in a warning summary after all work completes. Post-processing warnings SHALL NOT cause a non-zero exit code. The final warning summary SHALL suggest re-running with `--postprocess-only` to retry.
+
+#### Scenario: DB connect failure during post-processing warns and continues
+- **WHEN** post-processing SQL is configured for a source but the DB is unreachable at that point
+- **THEN** a warning is printed to stderr and replication init proceeds normally
+- **AND** the command exits zero if no other hard errors occurred
+
+#### Scenario: SQL execution error warns and continues
+- **WHEN** a post-processing SQL file contains a statement that fails
+- **THEN** a warning is printed to stderr and replication init proceeds normally
+- **AND** the command exits zero if no other hard errors occurred
+
+#### Scenario: Post-processing warnings appear in final summary
+- **WHEN** one or more sources have post-processing warnings
+- **THEN** all warnings are printed after the progress output clears, with a count and a hint to use `--postprocess-only`
+
+#### Scenario: Exit code is zero when only warnings occurred
+- **WHEN** all imports and replication inits succeed but post-processing failed for one source
+- **THEN** the command exits zero
+
+### Requirement: Single spinner finish per import task
+The progress spinner for an import task SHALL be finished exactly once — at the end of the full pipeline (on success or on a hard failure that causes the task to return an error). Intermediate soft failures (post-processing warnings) SHALL update the spinner message but SHALL NOT call `finish_with_message`, leaving the bar active for subsequent pipeline steps.
+
+#### Scenario: Post-process warning does not freeze the spinner
+- **WHEN** post-processing fails softly for a source
+- **THEN** the spinner continues animating through the replication init step and is only finished when that step completes (or fails hard)
+
+### Requirement: `--postprocess-only` flag
+`osmprj sync --postprocess-only` SHALL skip downloading and importing entirely and instead re-run only the post-processing SQL for each in-scope source. `osm2pgsql` and `osm2pgsql-replication` are not required and SHALL NOT be checked when this flag is set. For each source the DB connection is opened independently (per-source). Sources with no post-processing SQL SHALL be skipped with a notice. Any SQL execution or DB connect error is reported per-source and causes a non-zero exit. The optional source-filter positional arguments are honoured: when provided, only those sources are processed.
+
+#### Scenario: Runs SQL only, no download or import
+- **WHEN** user runs `osmprj sync --postprocess-only`
+- **THEN** no PBF download is attempted and `osm2pgsql` is not invoked
+- **AND** post-processing SQL is executed for each source that has it
+
+#### Scenario: Skips sources with no SQL
+- **WHEN** a source has no theme SQL and no `extra_sql` configured
+- **THEN** that source is skipped with an informational message and counted as successful
+
+#### Scenario: Source filter is honoured
+- **WHEN** user runs `osmprj sync --postprocess-only monaco`
+- **THEN** only the `monaco` source's post-processing SQL is executed
+
+#### Scenario: Exit non-zero on SQL failure
+- **WHEN** a SQL statement in a post-processing file fails during `--postprocess-only`
+- **THEN** the error is reported and the command exits non-zero
+
+#### Scenario: Does not require osm2pgsql on PATH
+- **WHEN** user runs `osmprj sync --postprocess-only` and `osm2pgsql` is not on PATH
+- **THEN** the command proceeds normally (no binary check is performed)

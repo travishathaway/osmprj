@@ -20,13 +20,17 @@ SYNC_SOURCES = [
 pytestmark = [pytest.mark.slow, pytest.mark.integration, pytest.mark.timeout(300)]
 
 
-@pytest.fixture(scope="session", params=SYNC_SOURCES)
+@pytest.fixture(scope="module", params=SYNC_SOURCES)
 def source_state(request, run_cmd_with_server, pg_e2e, tmp_path_factory):
-    """Session fixture — one isolated osmprj project per parametrized source.
+    """Provide module fixture — one isolated osmprj project per parametrized source.
 
     Runs the full lifecycle: init → add → first sync → second sync, capturing
     results and replication timestamps so individual tests can assert without
     triggering additional network or DB operations.
+
+    Module scope ensures teardown (schema removal) completes before any later
+    test modules run, preventing schema state from leaking into tests that use
+    the shared pg_e2e database.
 
     Downloads are served by the local test HTTP server (no Geofabrik traffic).
     """
@@ -58,7 +62,7 @@ def source_state(request, run_cmd_with_server, pg_e2e, tmp_path_factory):
             ).fetchone()
             ts_after = row[0] if row else None
 
-    return {
+    yield {
         "geofabrik_id": geofabrik_id,
         "schema": schema,
         "theme": theme,
@@ -68,6 +72,11 @@ def source_state(request, run_cmd_with_server, pg_e2e, tmp_path_factory):
         "ts_before": ts_before,
         "ts_after": ts_after,
     }
+
+    # Clean up
+    result = run_cmd_with_server("remove", "--force", geofabrik_id, cwd=project, check=False)
+
+    assert result.stderr == ""
 
 
 def test_first_sync_imports_source(source_state, pg_e2e):

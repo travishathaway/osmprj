@@ -16,7 +16,6 @@ Run with:
 from typing import NamedTuple
 
 import pytest
-from _platform import platform_cache_subdir
 
 pytestmark = [pytest.mark.slow, pytest.mark.timeout(120)]
 
@@ -35,7 +34,9 @@ class Source(NamedTuple):
 
 def _init_error_project(run_cmd_with_server, tmp_path, sources, db_url):
     """Initialize a minimal osmprj project with a dummy (unreachable) DB URL."""
-    run_cmd_with_server("init", "--db", db_url, cwd=tmp_path)
+    data_dir = tmp_path / "data"
+    data_dir.mkdir(parents=True)
+    run_cmd_with_server("init", "--db", db_url, "--data-dir", str(data_dir), cwd=tmp_path)
 
     for source in sources:
         run_cmd_with_server("add", source.name, "--theme", source.theme, cwd=tmp_path)
@@ -113,7 +114,7 @@ def test_sync_partial_download_cleans_up(
 
     assert result.returncode != 0
 
-    data_dir = platform_cache_subdir(geofabrik_cache_with_server) / "osmprj" / "geofabrik"
+    data_dir = tmp_path / "data"
     leftover = list(data_dir.glob("*.osm.pbf")) if data_dir.exists() else []
     assert leftover == [], f"Partial .osm.pbf files were not cleaned up: {leftover}"
 
@@ -132,18 +133,16 @@ def test_first_fails_second_succeeds(
 
     result = run_cmd_with_server("sync", cwd=tmp_path, check=False)
 
-    assert result.returncode != 0
     combined = (result.stdout + result.stderr).lower()
     assert "sync failed: 1 download failed, 0 imports failed" in combined
+    assert result.returncode != 0
 
     # Clean up
     run_cmd_with_server("remove", "--force", "liechtenstein", cwd=tmp_path)
     run_cmd_with_server("remove", "--force", "monaco", cwd=tmp_path)
 
 
-def test_post_process_sql_fails(
-    download_server, run_cmd_with_server, tmp_path, pg_e2e, reset_server_errors
-):
+def test_post_process_sql_fails(run_cmd_with_server, tmp_path, pg_e2e, reset_server_errors):
     """Ensure correct error messages appear when post-processing SQL has failed to run."""
     _init_error_project(
         run_cmd_with_server,
