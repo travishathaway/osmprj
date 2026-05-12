@@ -1,0 +1,72 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-installer:
+    name: Build installer / ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-64
+            runner: ubuntu-latest
+          - platform: osx-arm64
+            runner: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: prefix-dev/setup-pixi@v0.8.5
+        with:
+          environments: rust pack
+          cache: true
+
+      - name: Build Rust binary
+        run: pixi run --environment rust release
+
+      - name: Build conda package
+        run: pixi run --environment pack rattler-build build -r recipe/recipe.yaml --output-dir output/
+
+      - name: Pack environment
+        run: |
+          pixi run --environment pack pixi-pack pack \
+            --environment default \
+            --platform ${{ matrix.platform }} \
+            --inject "output/${{ matrix.platform }}/*.conda" \
+            --create-executable \
+            pixi.toml
+
+      - name: Rename installer
+        run: mv environment.sh osmprj-${{ matrix.platform }}-installer.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.platform }}
+          path: osmprj-*-installer.sh
+
+  publish-release:
+    name: Publish release assets
+    needs: build-installer
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: installers/
+          pattern: installer-*
+          merge-multiple: true
+
+      - name: Upload release assets
+        run: |
+          gh release upload ${{ github.ref_name }} \
+            installers/osmprj-linux-64-installer.sh \
+            installers/osmprj-osx-arm64-installer.sh \
+            scripts/install.sh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
