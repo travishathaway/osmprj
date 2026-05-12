@@ -29,7 +29,12 @@ jobs:
         run: pixi run --environment rust release
 
       - name: Build conda package
-        run: pixi run --environment pack rattler-build build -r recipe/recipe.yaml --output-dir output/
+        run: |
+          pixi run --environment pack \
+            rattler-build build \
+            --channel gis-forge --channel conda-forge \
+            -r recipe/recipe.yaml \
+            --output-dir output/
 
       - name: Pack environment
         run: |
