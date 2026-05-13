@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Tuner computes cache size from RAM and PBF size
 The tuner SHALL accept system RAM (GB), PBF file size (GB), and the number of concurrent imports and compute an appropriate `--cache` value in MB. The effective RAM budget per import SHALL be `system_ram_gb / concurrent_imports`. The cache formula SHALL be: `cache_mb = min(slim_cache, cache_max) * 1024`, where `slim_cache = 0.75 * (1 + 2.5 * pbf_gb)` and `cache_max = (system_ram_gb / concurrent_imports) * 0.66`.
