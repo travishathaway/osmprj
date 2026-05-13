@@ -3,14 +3,6 @@
 Tests are parametrized over ``SYNC_SOURCES`` — add a new ``pytest.param`` entry
 there to cover additional regions without writing new test functions.
 
-These tests are marked ``slow`` and ``integration``. They require:
-- A running osm2pgsql binary on PATH
-- ``THEMEPARK_PATH`` pointing to an osm2pgsql-themepark installation
-- ``pg-helper`` available on PATH (provided by the pixi dev environment)
-
-Run with:
-    pixi run --environment dev pytest tests/integration/test_sync_e2e.py -m slow -v
-
 Exclude from the default run with:
     pytest -m "not slow"
 """
@@ -23,24 +15,32 @@ SYNC_SOURCES = [
     # pytest.param(("liechtenstein", "liechtenstein", "shortbread"), id="liechtenstein"),
 ]
 
+# ─── happy-path tests ─────────────────────────────────────────────────────────
+
 pytestmark = [pytest.mark.slow, pytest.mark.integration, pytest.mark.timeout(300)]
 
 
-@pytest.fixture(scope="session", params=SYNC_SOURCES)
-def source_state(request, run_cmd, pg_e2e, tmp_path_factory):
-    """Session fixture — one isolated osmprj project per parametrized source.
+@pytest.fixture(scope="module", params=SYNC_SOURCES)
+def source_state(request, run_cmd_with_server, pg_e2e, tmp_path_factory):
+    """Provide module fixture — one isolated osmprj project per parametrized source.
 
     Runs the full lifecycle: init → add → first sync → second sync, capturing
     results and replication timestamps so individual tests can assert without
     triggering additional network or DB operations.
+
+    Module scope ensures teardown (schema removal) completes before any later
+    test modules run, preventing schema state from leaking into tests that use
+    the shared pg_e2e database.
+
+    Downloads are served by the local test HTTP server (no Geofabrik traffic).
     """
     geofabrik_id, schema, theme = request.param
 
     project = tmp_path_factory.mktemp(f"e2e_{geofabrik_id}")
-    run_cmd("init", "--db", pg_e2e, cwd=project)
-    run_cmd("add", geofabrik_id, "--theme", theme, cwd=project)
+    run_cmd_with_server("init", "--db", pg_e2e, cwd=project)
+    run_cmd_with_server("add", geofabrik_id, "--theme", theme, cwd=project)
 
-    first_sync = run_cmd("sync", "--verbose", cwd=project, check=False)
+    first_sync = run_cmd_with_server("sync", "--verbose", cwd=project, check=False)
 
     ts_before = None
     if first_sync.returncode == 0:
@@ -51,7 +51,7 @@ def source_state(request, run_cmd, pg_e2e, tmp_path_factory):
             ).fetchone()
             ts_before = row[0] if row else None
 
-    second_sync = run_cmd("sync", "--verbose", cwd=project, check=False)
+    second_sync = run_cmd_with_server("sync", "--verbose", cwd=project, check=False)
 
     ts_after = None
     if second_sync.returncode == 0:
@@ -62,7 +62,7 @@ def source_state(request, run_cmd, pg_e2e, tmp_path_factory):
             ).fetchone()
             ts_after = row[0] if row else None
 
-    return {
+    yield {
         "geofabrik_id": geofabrik_id,
         "schema": schema,
         "theme": theme,
@@ -72,6 +72,11 @@ def source_state(request, run_cmd, pg_e2e, tmp_path_factory):
         "ts_before": ts_before,
         "ts_after": ts_after,
     }
+
+    # Clean up
+    result = run_cmd_with_server("remove", "--force", geofabrik_id, cwd=project, check=False)
+
+    assert result.stderr == ""
 
 
 def test_first_sync_imports_source(source_state, pg_e2e):

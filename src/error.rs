@@ -174,4 +174,8 @@ pub enum OsmprjError {
     #[error(transparent)]
     #[diagnostic(code(osmprj::io))]
     Io(#[from] std::io::Error),
+
+    #[error("Sync failed: {message}")]
+    #[diagnostic(code(osmprj::sync_failed))]
+    SyncFailed { message: String },
 }
