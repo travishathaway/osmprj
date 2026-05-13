@@ -1,6 +1,6 @@
 
 <p align="center">
-  <img src="https://travishathaway.github.io/osmprj/img/osmprj-logo-big.png" width="50%">
+  <img src="https://travishathaway.github.io/osmprj/img/osmprj-logo-big.png" width="25%">
 </p>
 <p align="center">
   <em>A friendly, modern tool for managing OpenStreetMap data with PostgreSQL</em>
