@@ -38,15 +38,62 @@ The system SHALL use only the async `reqwest` API (`reqwest::Client`, not `reqwe
 - **THEN** the command exits non-zero with a message indicating the project file is missing
 
 ### Requirement: Downloads run concurrently
-All Geofabrik sources (those without a `path` field) SHALL be downloaded concurrently. Each download SHALL display an individual indicatif progress bar showing bytes received, total size, transfer rate, and ETA.
+All Geofabrik sources (those without a `path` field) SHALL be downloaded concurrently, subject to the `max_concurrent_downloads` limit (default 3). Each download SHALL display an individual indicatif progress bar showing bytes received, total size, transfer rate, and ETA. Downloads SHALL be ordered largest-first based on pre-flight HEAD requests.
 
-#### Scenario: Concurrent downloads
-- **WHEN** `osmprj.toml` contains two or more Geofabrik sources
-- **THEN** both downloads begin simultaneously and each shows its own progress bar
+#### Scenario: Concurrent downloads respect cap
+- **WHEN** `osmprj.toml` contains five or more Geofabrik sources and `max_concurrent_downloads = 3`
+- **THEN** at most 3 downloads run simultaneously at any time
 
 #### Scenario: Local path sources skipped
 - **WHEN** a source has a `path` field set
 - **THEN** no download is attempted for that source
+
+### Requirement: Imports run concurrently up to configured limit
+Sources SHALL be imported into the database concurrently, up to the `max_concurrent_imports` limit (default 1). Each import SHALL begin as soon as its download completes, not after all downloads finish. A failed import SHALL NOT stop other in-flight or pending imports.
+
+#### Scenario: Import starts on download completion
+- **WHEN** a source's download and MD5 verification succeed
+- **THEN** its import begins immediately without waiting for other downloads
+
+#### Scenario: Import concurrency respects cap
+- **WHEN** `max_concurrent_imports = 1` and one import is running
+- **THEN** the next ready source waits until the running import finishes
+
+#### Scenario: Import failure does not stop other imports
+- **WHEN** source A's import fails
+- **THEN** source B's import continues if it is already in-flight or waiting
+
+### Requirement: Failed downloads do not block other downloads
+If one download fails, all other in-progress and queued downloads SHALL continue. The import phase SHALL NOT begin for any source whose download failed.
+
+#### Scenario: One of two downloads fails
+- **WHEN** source A's download fails and source B's download is in progress
+- **THEN** source B's download finishes; source A is not imported; errors are reported at the end
+
+### Requirement: Download-to-import transition message
+The separate "files ready — starting imports" transition message SHALL be removed. The unified progress display replaces it. No explicit phase-separator line is printed between downloads and imports.
+
+#### Scenario: No phase separator printed
+- **WHEN** a source completes downloading and its import begins
+- **THEN** no "files ready" transition line is printed; the spinner appears in the live display
+
+### Requirement: Imports run sequentially
+**REMOVED** — superseded by "Imports run concurrently up to configured limit".
+
+**Reason**: The pipelined architecture allows concurrent imports controlled by a semaphore. Sequential execution is now the special case of `max_concurrent_imports = 1` (the default), not a hard constraint.
+
+**Migration**: Set `max_concurrent_imports = 1` in `osmprj.toml` (or omit the field; it defaults to 1) to preserve sequential import behaviour.
+
+### Requirement: Replication initialised per source
+After each source's import and post-processing succeed, `osm2pgsql-replication init -d <database_url> --schema <effective_schema>` SHALL be run immediately as part of that source's import task, not in a separate end-of-sync loop. If `osm2pgsql-replication` is not on `PATH`, the command SHALL exit with a clear error.
+
+#### Scenario: Replication init runs immediately after import success
+- **WHEN** a source's osm2pgsql import and post-processing SQL complete successfully
+- **THEN** `osm2pgsql-replication init` runs for that source before the import semaphore permit is released
+
+#### Scenario: Missing osm2pgsql-replication binary
+- **WHEN** `osm2pgsql-replication` is not found on PATH
+- **THEN** the command exits non-zero with an error message
 
 ### Requirement: Downloads verified with MD5
 After each download completes, the tool SHALL fetch `<pbf_url>.md5` from Geofabrik and verify the downloaded file's MD5 hash matches. A mismatch SHALL be treated as a download failure.
@@ -59,33 +106,12 @@ After each download completes, the tool SHALL fetch `<pbf_url>.md5` from Geofabr
 - **WHEN** the downloaded file's MD5 does not match the `.md5` file
 - **THEN** the download is treated as a failure and reported in the error summary
 
-### Requirement: Failed downloads do not block other downloads
-If one download fails, all other in-progress downloads SHALL complete before the command reports errors and exits. The import phase SHALL NOT begin if any download failed.
-
-#### Scenario: One of two downloads fails
-- **WHEN** source A's download fails and source B's download is in progress
-- **THEN** source B's download finishes, both errors are reported, and no imports are started
-
 ### Requirement: Skip already-downloaded sources
 If `osmprj.lock` contains an entry for a source, the download SHALL be skipped and the existing file used for import. No network request is made for that source's PBF file.
 
 #### Scenario: Source already in lock file
 - **WHEN** `osmprj.lock` has an entry for source `albania`
 - **THEN** `albania.osm.pbf` is not re-downloaded
-
-### Requirement: Download-to-import transition message
-After all downloads complete successfully, all progress bars SHALL be cleared and a single summary line printed containing a map emoji before imports begin.
-
-#### Scenario: Transition message
-- **WHEN** all downloads succeed
-- **THEN** a line containing `🗺` and a "downloads complete" message is printed before the first import starts
-
-### Requirement: Imports run sequentially
-Sources SHALL be imported into the database one at a time in the order they appear in `osmprj.toml`. A failed import SHALL stop all remaining imports immediately.
-
-#### Scenario: Import failure stops further imports
-- **WHEN** the import for source A fails
-- **THEN** source B is not imported and the command exits non-zero
 
 ### Requirement: Import shows globe spinner
 Each import SHALL display an indicatif spinner cycling through globe emojis (🌍 🌎 🌏 🌐) at ~250 ms intervals while `osm2pgsql` is running.
@@ -107,17 +133,6 @@ When the `-v` / `--verbose` global flag is set, osm2pgsql stdout and stderr SHAL
 #### Scenario: Verbose import output
 - **WHEN** user runs `osmprj -v sync`
 - **THEN** osm2pgsql output is visible in the terminal during import
-
-### Requirement: Replication initialised per source
-After all imports succeed, `osm2pgsql-replication init -d <database_url> --schema <effective_schema>` SHALL be run once per successfully imported source. If `osm2pgsql-replication` is not on `PATH`, the command SHALL exit with a clear error.
-
-#### Scenario: Replication init runs after successful imports
-- **WHEN** all sources are imported successfully
-- **THEN** `osm2pgsql-replication init` is called for each source with the correct `--schema`
-
-#### Scenario: Missing osm2pgsql-replication binary
-- **WHEN** `osm2pgsql-replication` is not found on PATH
-- **THEN** the command exits non-zero with an error message before the import phase
 
 ### Requirement: Partial download file cleanup
 When `download_pbf()` fails after creating the destination file (e.g., due to a network error or
