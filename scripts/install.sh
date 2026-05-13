@@ -9,8 +9,9 @@ case "$OS" in
   Linux)
     case "$ARCH" in
       x86_64) PLATFORM="linux-64" ;;
+      aarch64) PLATFORM="linux-aarch64" ;;
       *)
-        echo "Unsupported architecture: $ARCH on Linux. Only x86_64 is supported." >&2
+        echo "Unsupported architecture: $ARCH on Linux. Only x86_64 and aarch64 is supported." >&2
         exit 1
         ;;
     esac
