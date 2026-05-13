@@ -46,6 +46,9 @@ enum Commands {
         /// Database connection URL
         #[arg(long)]
         db: Option<String>,
+        /// Directory where .osm.pbf files are saved (overrides the default cache location)
+        #[arg(long)]
+        data_dir: Option<String>,
     },
     /// Add a new OSM data source to osmprj.toml
     Add {
@@ -73,6 +76,9 @@ enum Commands {
     Sync {
         /// Specific sources to sync (defaults to all)
         sources: Vec<String>,
+        /// Re-run post-processing SQL only; skip download and import
+        #[arg(long)]
+        postprocess_only: bool,
     },
     /// Remove a data source from osmprj.toml
     Remove {
@@ -147,7 +153,7 @@ async fn main() -> miette::Result<()> {
     let verbose = cli.verbose;
 
     match cli.command {
-        Commands::Init { db } => commands::init::run(db),
+        Commands::Init { db, data_dir } => commands::init::run(db, data_dir),
         Commands::Add {
             geofabrik_ids,
             path,
@@ -160,9 +166,12 @@ async fn main() -> miette::Result<()> {
             let config = ProjectConfig::load()?.ok_or(error::OsmprjError::ProjectNotFound)?;
             commands::status::run(&config).await
         }
-        Commands::Sync { sources } => {
+        Commands::Sync {
+            sources,
+            postprocess_only,
+        } => {
             let config = ProjectConfig::load()?.ok_or(error::OsmprjError::ProjectNotFound)?;
-            commands::sync::run(sources, verbose, &config).await
+            commands::sync::run(sources, verbose, postprocess_only, &config).await
         }
         Commands::Remove {
             sources,

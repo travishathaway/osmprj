@@ -12,12 +12,12 @@ sidebar_position: 1
 - **[Geofabrik](https://download.geofabrik.de/)** — provides regional OSM extracts that osmprj can download and keep up to date automatically
 - **[osm2pgsql-replication](https://osm2pgsql.org/doc/manual.html#updating-an-existing-database)** — handles incremental updates so subsequent syncs apply only the changes since the last run
 
-Instead of juggling these tools manually, osmprj provides a project file (`osmprj.toml`) that tracks your sources, and a small set of commands that orchestrate the full lifecycle: download, import, tune, and update.
+Instead of juggling these tools manually, osmprj provides a project file (`osmprj.toml`) that tracks your sources, and a small set of commands that orchestrate the full lifecycle: download, import, and update.
 
 ## Status
 
 :::warning
-osmprj is experimental software under active development. Commands, configuration formats, and behaviour may change without notice between versions. It is not yet recommended for production use.
+osmprj is experimental software under active development. Commands, configuration formats, and behavior may change without notice between versions. It is not yet recommended for production use.
 :::
 
 Feedback and bug reports are welcome — [open an issue on GitHub](https://github.com/travishathaway/osmprj/issues/new).

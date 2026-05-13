@@ -1,0 +1,5 @@
+name        = "bad-postprocess"
+version     = "0.1.0"
+description = "Test theme with intentionally broken post-process SQL"
+type        = "themepark"
+entry       = "config.lua"

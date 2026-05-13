@@ -87,21 +87,11 @@ def geofabrik_project(run_cmd, pg_e2e, tmp_path):
     run_cmd("remove", "--force", "monaco", cwd=tmp_path)
 
 
-# ---------------------------------------------------------------------------
-# 5.3 — remove --force removes entry from osmprj.toml
-# ---------------------------------------------------------------------------
-
-
 def test_remove_force_removes_from_toml(isolated_project, run_cmd):
     project = isolated_project["project"]
     run_cmd("remove", "--force", SOURCE_NAME, cwd=project)
     config = tomllib.loads((project / "osmprj.toml").read_text())
     assert SOURCE_NAME not in config.get("sources", {})
-
-
-# ---------------------------------------------------------------------------
-# 5.4 — remove --force removes entry from osmprj.lock
-# ---------------------------------------------------------------------------
 
 
 def test_remove_force_removes_from_lock(isolated_project, run_cmd):
@@ -121,11 +111,6 @@ def test_remove_force_removes_from_lock(isolated_project, run_cmd):
     assert SOURCE_NAME not in lock.get("sources", {})
 
 
-# ---------------------------------------------------------------------------
-# 5.5 — remove --force drops the PostgreSQL schema
-# ---------------------------------------------------------------------------
-
-
 def test_remove_force_drops_schema(isolated_project, run_cmd):
     project = isolated_project["project"]
     db_url = isolated_project["db_url"]
@@ -134,11 +119,6 @@ def test_remove_force_drops_schema(isolated_project, run_cmd):
     assert not _schema_exists(db_url, SCHEMA_NAME), (
         f"Schema '{SCHEMA_NAME}' still exists after remove"
     )
-
-
-# ---------------------------------------------------------------------------
-# 5.6 — remove --dry-run leaves everything unchanged
-# ---------------------------------------------------------------------------
 
 
 def test_dry_run_leaves_toml_unchanged(geofabrik_project, run_cmd):
@@ -165,11 +145,6 @@ def test_dry_run_leaves_schema_intact(geofabrik_project, run_cmd):
     assert _schema_exists(db_url, source), f"Schema '{source}' was dropped by dry-run"
 
 
-# ---------------------------------------------------------------------------
-# 5.7 — unknown source exits non-zero without modifying anything
-# ---------------------------------------------------------------------------
-
-
 def test_unknown_source_exits_nonzero(isolated_project, run_cmd):
     project = isolated_project["project"]
     result = run_cmd("remove", "nonexistent", cwd=project, check=False)
@@ -187,11 +162,6 @@ def test_unknown_source_leaves_toml_unchanged(isolated_project, run_cmd):
     original = (project / "osmprj.toml").read_text()
     run_cmd("remove", "nonexistent", cwd=project, check=False)
     assert (project / "osmprj.toml").read_text() == original
-
-
-# ---------------------------------------------------------------------------
-# 5.8 — prompt without --force: declining aborts cleanly
-# ---------------------------------------------------------------------------
 
 
 def test_prompt_shown_without_force(isolated_project, binary):
