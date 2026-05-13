@@ -226,9 +226,26 @@ body {
 
 /* ─── Navbar ──────────────────────────────────────────────────────── */
 
+/*
+ * backdrop-filter on the <nav> itself creates a new stacking context, which
+ * causes position:fixed children (the mobile sidebar) to be clipped inside
+ * the navbar instead of covering the full viewport.  Apply the blur via a
+ * pseudo-element so the stacking context is isolated to the background layer.
+ */
 .navbar {
-  backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
+  /* Needed so the ::before pseudo-element can be absolutely positioned. */
+  position: relative;
+}
+
+.navbar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(8px);
+  /* Sit behind all navbar content but above whatever is underneath. */
+  z-index: -1;
+  pointer-events: none;
 }
 
 .navbar__title {
@@ -653,6 +670,13 @@ div[class*="codeBlockTitle"] {
 
   .hero__logo img {
     width: 200px;
+  }
+}
+
+@media (max-width: 996px) {
+  .hero {
+    padding-left: 20px;
+    padding-right: 20px;
   }
 }
 
