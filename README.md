@@ -13,6 +13,9 @@
   <a href="https://travishathaway.github.io/osmprj" target="_blank">
       <img src="https://img.shields.io/static/v1?label=Documentation&message=View&color=blue&logo=readme&logoColor=white" alt="Documentation">
   </a>
+  <a href="https://github.com/sponsors/travishathaway" target="_blank">
+      <img src="https://img.shields.io/badge/Sponsor-GitHub-pink?logo=github" alt="Sponsor">
+  </a>
 </p>
 
 A command-line tool for managing OpenStreetMap data imports into PostgreSQL that provides a project based workflow similar to tools like [uv](https://docs.astral.sh/uv/), [Cargo](https://crates.io) and [pixi](https://pixi.sh). It wraps `osm2pgsql` to automate downloading PBF files from Geofabrik, running incremental updates, and offers 9 built-in themes you can use to customize the layout of your database.
