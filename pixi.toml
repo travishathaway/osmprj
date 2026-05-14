@@ -9,7 +9,7 @@ platforms = ["linux-64", "osx-arm64", "linux-aarch64"] #  "osx-64", "win-64"]
 default = { solve-group = "default" }
 dev = { features = ["dev"], solve-group = "default" }
 rust = { features = ["rust"], no-default-feature = true }
-pack = { features = ["pack"], no-default-feature = false }
+pack = { features = ["pack"], no-default-feature = true }
 
 [dependencies]
 osm2pgsql = ">=2"
