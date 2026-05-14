@@ -36,12 +36,15 @@ RELEASE_BASE="https://github.com/travishathaway/osmprj/releases/latest/download"
 
 # Download platform-specific installer
 echo "Downloading osmprj installer for $PLATFORM..."
-curl -fsSL "$RELEASE_BASE/osmprj-${PLATFORM}-installer.sh" -o /tmp/osmprj-installer.sh
-chmod +x /tmp/osmprj-installer.sh
+INSTALLER_SCRIPT="$(mktemp "${TMPDIR:-/tmp}/osmprj-installer.XXXXXX.sh")"
+trap 'rm -f "$INSTALLER_SCRIPT"' EXIT
+
+curl -fsSL "$RELEASE_BASE/osmprj-${PLATFORM}-installer.sh" -o "$INSTALLER_SCRIPT"
+chmod +x "$INSTALLER_SCRIPT"
 
 # Run the installer
 echo "Installing osmprj to $INSTALL_DIR..."
-/tmp/osmprj-installer.sh --output-directory "$INSTALL_DIR"
+"$INSTALLER_SCRIPT" --output-directory "$INSTALL_DIR"
 
 # Detect shell rc file
 if [[ "$SHELL" == *zsh* ]]; then
@@ -61,9 +64,6 @@ if ! grep -q "# osmprj" "$RC_FILE" 2>/dev/null; then
     echo "export OSMPRJ_THEME_PATH=\"$INSTALL_DIR/env/share/osmprj/themes/\""
   } >> "$RC_FILE"
 fi
-
-# Cleanup
-rm /tmp/osmprj-installer.sh
 
 # Success message
 echo ""

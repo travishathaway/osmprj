@@ -80,12 +80,8 @@ jobs:
 
       - name: Generate checksums
         run: |
-          sha256sum \
-            installers/osmprj-linux-64-installer.sh \
-            installers/osmprj-linux-aarch64-installer.sh \
-            installers/osmprj-osx-arm64-installer.sh \
-            scripts/install.sh \
-            > checksums.sha256
+          (cd installers && sha256sum osmprj-*.sh) > checksums.sha256
+          (cd scripts && sha256sum install.sh) >> checksums.sha256
 
       - uses: sigstore/cosign-installer@v3
 
