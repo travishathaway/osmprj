@@ -44,9 +44,9 @@ echo "Installing osmprj to $INSTALL_DIR..."
 /tmp/osmprj-installer.sh --output-directory "$INSTALL_DIR"
 
 # Detect shell rc file
-if echo "$SHELL" | grep -q "zsh"; then
+if [[ "$SHELL" == *zsh* ]]; then
   RC_FILE="$HOME/.zshrc"
-elif echo "$SHELL" | grep -q "bash"; then
+elif [[ "$SHELL" == *bash* ]]; then
   RC_FILE="$HOME/.bashrc"
 else
   RC_FILE="$HOME/.profile"
@@ -54,10 +54,12 @@ fi
 
 # Idempotent rc file patching
 if ! grep -q "# osmprj" "$RC_FILE" 2>/dev/null; then
-  echo "" >> "$RC_FILE"
-  echo "# osmprj" >> "$RC_FILE"
-  echo "export PATH=\"$INSTALL_DIR/env/bin:\$PATH\"" >> "$RC_FILE"
-  echo "export OSMPRJ_THEME_PATH=\"$INSTALL_DIR/env/share/osmprj/themes/\"" >> "$RC_FILE"
+  {
+    echo ""
+    echo "# osmprj"
+    echo "export PATH=\"$INSTALL_DIR/env/bin:\$PATH\""
+    echo "export OSMPRJ_THEME_PATH=\"$INSTALL_DIR/env/share/osmprj/themes/\""
+  } >> "$RC_FILE"
 fi
 
 # Cleanup
