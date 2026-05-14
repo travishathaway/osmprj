@@ -40,10 +40,16 @@ jobs:
 
       - name: Pack environment
         run: |
+          shopt -s nullglob
+          artifacts=(output/${{ matrix.platform }}/*.conda)
+          if [ "${#artifacts[@]}" -ne 1 ]; then
+            echo "Expected exactly one conda artifact for ${{ matrix.platform }}, found ${#artifacts[@]}" >&2
+            exit 1
+          fi
           pixi run --environment pack pixi-pack \
             --environment default \
             --platform ${{ matrix.platform }} \
-            --inject $(ls "output/${{ matrix.platform }}/*.conda") \
+            --inject "${artifacts[0]}" \
             --create-executable \
             pixi.toml
 
