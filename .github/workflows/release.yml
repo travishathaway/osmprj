@@ -14,6 +14,8 @@ jobs:
         include:
           - platform: linux-64
             runner: ubuntu-latest
+          - platform: linux-aarch64
+            runner: ubuntu-24.04-arm
           - platform: osx-arm64
             runner: macos-14
 
@@ -29,14 +31,25 @@ jobs:
         run: pixi run --environment rust release
 
       - name: Build conda package
-        run: pixi run --environment pack rattler-build build -r recipe/recipe.yaml --output-dir output/
+        run: |
+          pixi run --environment pack \
+            rattler-build build \
+            --channel gis-forge --channel conda-forge \
+            -r recipe/recipe.yaml \
+            --output-dir output/
 
       - name: Pack environment
         run: |
-          pixi run --environment pack pixi-pack pack \
+          shopt -s nullglob
+          artifacts=(output/${{ matrix.platform }}/*.conda)
+          if [ "${#artifacts[@]}" -ne 1 ]; then
+            echo "Expected exactly one conda artifact for ${{ matrix.platform }}, found ${#artifacts[@]}" >&2
+            exit 1
+          fi
+          pixi run --environment pack pixi-pack \
             --environment default \
             --platform ${{ matrix.platform }} \
-            --inject "output/${{ matrix.platform }}/*.conda" \
+            --inject "${artifacts[0]}" \
             --create-executable \
             pixi.toml
 
@@ -52,6 +65,9 @@ jobs:
     name: Publish release assets
     needs: build-installer
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
 
     steps:
       - uses: actions/checkout@v4
@@ -62,11 +78,28 @@ jobs:
           pattern: installer-*
           merge-multiple: true
 
+      - name: Generate checksums
+        run: |
+          (cd installers && sha256sum osmprj-*.sh) > checksums.sha256
+          (cd scripts && sha256sum install.sh) >> checksums.sha256
+
+      - uses: sigstore/cosign-installer@v3
+
+      - name: Sign checksums
+        run: |
+          cosign sign-blob \
+            --yes \
+            --bundle checksums.sha256.bundle \
+            checksums.sha256
+
       - name: Upload release assets
         run: |
           gh release upload ${{ github.ref_name }} \
             installers/osmprj-linux-64-installer.sh \
+            installers/osmprj-linux-aarch64-installer.sh \
             installers/osmprj-osx-arm64-installer.sh \
-            scripts/install.sh
+            scripts/install.sh \
+            checksums.sha256 \
+            checksums.sha256.bundle
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

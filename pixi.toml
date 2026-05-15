@@ -3,12 +3,13 @@ name = "osmprj"
 version = "0.1.0"
 description = "OpenStreetMap and PostgreSQL project management tool"
 channels = ["gis-forge", "https://prefix.dev/thath", "conda-forge"]
-platforms = ["linux-64", "linux-aarch64", "osx-arm64"] #  "osx-64", "win-64"]
+platforms = ["linux-64", "osx-arm64", "linux-aarch64"] #  "osx-64", "win-64"]
 
 [environments]
 default = { solve-group = "default" }
 dev = { features = ["dev"], solve-group = "default" }
 rust = { features = ["rust"], no-default-feature = true }
+pack = { features = ["pack"], no-default-feature = true }
 
 [dependencies]
 osm2pgsql = ">=2"
@@ -22,6 +23,11 @@ rust = ">=1.80"
 
 [feature.rust.tasks]
 release = "cargo build --release"
+
+[feature.pack.dependencies]
+rust = ">=1.80"
+rattler-build = ">=0.30.0"
+pixi-pack = ">=0.7.6"
 
 [feature.dev.dependencies]
 rust = ">=1.80"

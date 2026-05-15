@@ -1,0 +1,62 @@
+name: Smoke Test
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke-test:
+    name: Smoke test / ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-64
+            runner: ubuntu-latest
+          - platform: osx-arm64
+            runner: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: prefix-dev/setup-pixi@v0.8.5
+        with:
+          environments: rust pack
+          cache: true
+
+      - name: Build Rust binary
+        run: pixi run --environment rust release
+
+      - name: Build conda package
+        run: |
+          pixi run --environment pack \
+            rattler-build build \
+            --channel gis-forge --channel conda-forge \
+            -r recipe/recipe.yaml \
+            --output-dir output/
+
+      - name: Pack environment
+        run: |
+          shopt -s nullglob
+          artifacts=(output/${{ matrix.platform }}/*.conda)
+          if [ "${#artifacts[@]}" -ne 1 ]; then
+            echo "Expected exactly one conda artifact for ${{ matrix.platform }}, found ${#artifacts[@]}" >&2
+            exit 1
+          fi
+          pixi run --environment pack pixi-pack \
+            --environment default \
+            --platform ${{ matrix.platform }} \
+            --inject "${artifacts[0]}" \
+            --create-executable \
+            pixi.toml
+
+      - name: Rename installer
+        run: mv environment.sh osmprj-${{ matrix.platform }}-installer.sh
+
+      - name: Run installer
+        run: ./osmprj-${{ matrix.platform }}-installer.sh --output-directory /tmp/osmprj-test
+
+      - name: Assert binary is functional
+        run: /tmp/osmprj-test/env/bin/osmprj --version
