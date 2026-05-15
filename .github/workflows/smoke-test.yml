@@ -26,14 +26,12 @@ jobs:
           environments: rust pack
           cache: true
 
-      - name: Build Rust binary
-        run: pixi run --environment rust release
-
       - name: Build conda package
         run: |
           pixi run --environment pack \
             rattler-build build \
             --channel gis-forge --channel conda-forge \
+            --variant-config recipe/variants.${{ matrix.platform }}.yaml \
             -r recipe/recipe.yaml \
             --output-dir output/
 

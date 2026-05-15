@@ -1,0 +1,12 @@
+c_compiler:
+  - vs2022
+cxx_compiler:
+  - vs2022
+c_stdlib:
+  - vs
+go_compiler:
+  - go-nocgo
+cgo_compiler:
+  - go-cgo
+target_platform:
+  - win-64
