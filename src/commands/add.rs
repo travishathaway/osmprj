@@ -97,6 +97,8 @@ pub async fn run(
         db::connect(url).await?;
     }
 
+    // TODO: Creating this entry should happen only if the schema creation was
+    //       successful.
     for (source_name, pbf_path) in &sources_to_add {
         let effective_schema = SourceConfig {
             schema: schema.clone(),
