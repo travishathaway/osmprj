@@ -1,9 +1,17 @@
 """Integration tests for the status command."""
 
+import pytest
+
 try:
     import tomllib
 except ImportError:
     import tomli as tomllib
+
+
+@pytest.fixture(autouse=True)
+def clear_osmprj_database_url(monkeypatch):
+    """Prevent inherited env credentials from overriding inline test URLs."""
+    monkeypatch.delenv("OSMPRJ_DATABASE_URL", raising=False)
 
 
 def test_status_fails_without_project(run):
