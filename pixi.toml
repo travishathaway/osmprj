@@ -51,4 +51,6 @@ tomli = ">=2.0.1" #; python_version<'3.11'",
 env = { PATH = "$PIXI_PROJECT_ROOT/target/debug:$PATH", OSMPRJ_THEME_PATH = "$PIXI_PROJECT_ROOT/themes" }
 
 [feature.dev.tasks]
-test = "pytest tests"
+test = "cargo test && pytest tests"
+test-unit = "cargo test"
+test-integration = "pytest tests"
