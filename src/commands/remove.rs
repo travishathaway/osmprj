@@ -70,7 +70,7 @@ pub async fn run(
             })?;
 
     // Connect to DB once (best-effort).
-    let db_client = match config.project.effective_database_url()? {
+    let mut db_client = match config.project.effective_database_url()? {
         None => None,
         Some(url) => match db::connect(&url).await {
             Ok(client) => Some(client),
@@ -92,12 +92,9 @@ pub async fn run(
         println!("Removed [sources.{name}] from osmprj.toml");
 
         // 2. Drop database schema (best-effort).
-        if config.project.database_url.is_none()
-            && config.project.database_url_command.is_none()
-            && std::env::var("OSMPRJ_DATABASE_URL").is_err()
-        {
+        if config.project.database_url.is_none() && std::env::var("OSMPRJ_DATABASE_URL").is_err() {
             println!("  hint: no database URL configured — skipping schema drop for '{schema}'");
-        } else if let Some(ref client) = db_client {
+        } else if let Some(ref mut client) = db_client {
             match db::drop_schema(client, schema).await {
                 Ok(()) => println!("  Dropped schema '{schema}'"),
                 Err(e) => eprintln!("  warning: failed to drop schema '{schema}': {e}"),

@@ -7,6 +7,7 @@ mod lock;
 mod output;
 mod theme_registry;
 mod tuner;
+mod url_utils;
 
 use clap::{Args, ColorChoice, CommandFactory, FromArgMatches, Parser, Subcommand};
 use config::ProjectConfig;

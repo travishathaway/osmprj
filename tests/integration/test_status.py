@@ -53,7 +53,7 @@ def test_status_bad_db_url_shows_connection_failed(run, tmp_path):
 def test_status_bad_db_url_shows_helpful_tip(run, tmp_path):
     run("init", "--db", "postgres://127.0.0.1:1/nodb", cwd=tmp_path)
     result = run("status", cwd=tmp_path)
-    assert "psql" in result.stdout
+    assert "verify your database credentials" in result.stdout
 
 
 def test_add_hints_when_no_db_url(run, project):

@@ -3,6 +3,7 @@ use crate::error::OsmprjError;
 use crate::lock::{LockFile, SourceLockEntry};
 use crate::output;
 use crate::theme_registry::{ThemeRegistry, ThemeType};
+use crate::url_utils::{parse_db_url, PgConnParams};
 use crate::{db, tuner};
 use chrono::Utc;
 use console::style;
@@ -277,10 +278,9 @@ async fn run_subprocess(
 /// Execute a list of SQL files against the database, substituting `{schema}` in each file.
 ///
 /// Files are executed in the order provided. Each file is split on `;` and each
-/// non-empty statement is executed individually (tokio-postgres does not support
-/// multi-statement queries via its standard API).
+/// non-empty statement is executed individually.
 pub async fn run_postprocess(
-    client: &tokio_postgres::Client,
+    conn: &mut sqlx::PgConnection,
     source_name: &str,
     schema: &str,
     sql_files: &[PathBuf],
@@ -301,14 +301,13 @@ pub async fn run_postprocess(
             if stmt.is_empty() {
                 continue;
             }
-            client
-                .execute(stmt, &[])
-                .await
-                .map_err(|e| OsmprjError::PostProcessFailed {
+            sqlx::query(stmt).execute(&mut *conn).await.map_err(|e| {
+                OsmprjError::PostProcessFailed {
                     source_name: source_name.to_string(),
                     file: file_name.clone(),
                     message: e.to_string(),
-                })?;
+                }
+            })?;
         }
     }
     Ok(())
@@ -348,8 +347,25 @@ fn collect_sql_files(source: &SourceConfig, registry: &ThemeRegistry) -> Vec<Pat
     files
 }
 
+/// Build the libpq environment variables to pass to child processes.
+/// The password is included only when present, so that processes without
+/// a password in the URL still consult ~/.pgpass or other libpq credential
+/// sources on their own.
+fn pg_env_vars(pg: &PgConnParams) -> Vec<(String, String)> {
+    let mut vars = vec![
+        ("PGHOST".to_string(), pg.host.clone()),
+        ("PGPORT".to_string(), pg.port.to_string()),
+        ("PGDATABASE".to_string(), pg.database.clone()),
+        ("PGUSER".to_string(), pg.user.clone()),
+    ];
+    if let Some(ref pw) = pg.password {
+        vars.push(("PGPASSWORD".to_string(), pw.clone()));
+    }
+    vars
+}
+
 async fn run_replication_init(
-    database_url: &str,
+    pg: &PgConnParams,
     schema: &str,
     log_path: &Path,
     verbose: bool,
@@ -357,7 +373,8 @@ async fn run_replication_init(
     let log_file = std::fs::File::create(log_path).map_err(OsmprjError::Io)?;
     let log = Arc::new(Mutex::new(log_file));
 
-    let repl_args = ["init", "-d", database_url, "--schema", schema];
+    let credential_free_url = pg.credential_free_url();
+    let repl_args = ["init", "-d", &credential_free_url, "--schema", schema];
     let cmd_line = format!("osm2pgsql-replication {}", repl_args.join(" "));
     if verbose {
         println!("  [command] {cmd_line}");
@@ -368,6 +385,7 @@ async fn run_replication_init(
 
     let mut child = tokio::process::Command::new("osm2pgsql-replication")
         .args(repl_args)
+        .envs(pg_env_vars(pg))
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -399,7 +417,7 @@ async fn run_replication_init(
 /// All data needed to run a single source through the full import pipeline.
 struct ImportSourceArgs {
     pub source_name: String,
-    pub db_url: String,
+    pub pg_conn: PgConnParams,
     pub effective_schema: String,
     pub srid: u32,
     pub argv: Vec<String>,
@@ -442,10 +460,11 @@ async fn import_source(
     spinner.enable_steady_tick(std::time::Duration::from_millis(250));
 
     let log_path = args.log_dir.join(format!("{}.log", name.replace('/', "-")));
-    let env_vars = vec![
+    let mut env_vars = vec![
         ("OSMPRJ_SCHEMA".to_string(), args.effective_schema.clone()),
         ("OSMPRJ_SRID".to_string(), args.srid.to_string()),
     ];
+    env_vars.extend(pg_env_vars(&args.pg_conn));
 
     run_subprocess(&args.argv, &env_vars, &log_path, args.verbose, &spinner)
         .await
@@ -458,7 +477,7 @@ async fn import_source(
     let mut pp_warning: Option<OsmprjError> = None;
     if !args.sql_files.is_empty() {
         spinner.set_message(format!("Post-processing {name}..."));
-        match db::connect(&args.db_url).await {
+        match db::connect(&args.pg_conn.credential_free_url()).await {
             Err(e) => {
                 spinner.set_message(format!("Post-processing {name} skipped (no DB)..."));
                 eprintln!(
@@ -471,8 +490,9 @@ async fn import_source(
                     message: e.to_string(),
                 });
             }
-            Ok(client) => {
-                match run_postprocess(&client, name, &args.effective_schema, &args.sql_files).await
+            Ok(mut client) => {
+                match run_postprocess(&mut client, name, &args.effective_schema, &args.sql_files)
+                    .await
                 {
                     Ok(()) => {
                         // spinner message will update to replication step below
@@ -495,7 +515,7 @@ async fn import_source(
         .join(format!("{}-replication-init.log", name.replace('/', "-")));
 
     run_replication_init(
-        &args.db_url,
+        &args.pg_conn,
         &args.effective_schema,
         &repl_log_path,
         args.verbose,
@@ -517,22 +537,23 @@ async fn import_source(
 // ─── replication update ───────────────────────────────────────────────────────
 
 async fn replication_update(
-    database_url: &str,
+    pg: &PgConnParams,
     schema: &str,
     style_path: Option<&PathBuf>,
     max_diff_size_mb: Option<u32>,
-    env_vars: &[(String, String)],
+    extra_env_vars: &[(String, String)],
     log_path: &Path,
     verbose: bool,
 ) -> Result<(), OsmprjError> {
     let log_file = std::fs::File::create(log_path).map_err(OsmprjError::Io)?;
     let log = Arc::new(Mutex::new(log_file));
 
+    let credential_free_url = pg.credential_free_url();
     let mut args: Vec<String> = vec![
         "osm2pgsql-replication".into(),
         "update".into(),
         "-d".into(),
-        database_url.into(),
+        credential_free_url.clone(),
         "--schema".into(),
         schema.into(),
     ];
@@ -558,7 +579,9 @@ async fn replication_update(
 
     let mut cmd = tokio::process::Command::new(&args[0]);
     cmd.args(&args[1..]);
-    for (k, v) in env_vars {
+    // Inject libpq credential env vars so passwords don't appear in argv or logs.
+    cmd.envs(pg_env_vars(pg));
+    for (k, v) in extra_env_vars {
         cmd.env(k, v);
     }
     let mut child = cmd
@@ -657,8 +680,8 @@ pub async fn run(
                         },
                     ));
                 }
-                Ok(client) => {
-                    match run_postprocess(&client, name, &effective_schema, &sql_files).await {
+                Ok(mut client) => {
+                    match run_postprocess(&mut client, name, &effective_schema, &sql_files).await {
                         Ok(()) => {
                             println!(
                                 "  {} {name}: post-processing complete",
@@ -710,6 +733,7 @@ pub async fn run(
         .effective_database_url()?
         .ok_or(OsmprjError::NoDatabaseUrl)?;
     let db_url = db_url_owned.as_str();
+    let pg_conn = parse_db_url(db_url)?;
 
     let max_diff_size_mb = config.project.max_diff_size_mb;
 
@@ -721,10 +745,10 @@ pub async fn run(
 
     if !db_url.is_empty() {
         match db::connect(db_url).await {
-            Ok(client) => {
+            Ok(mut client) => {
                 for (name, source) in &sources_to_sync {
                     let schema = source.effective_schema(name);
-                    match db::source_is_updatable(&client, &schema).await {
+                    match db::source_is_updatable(&mut client, &schema).await {
                         Ok(true) => update_sources.push(name),
                         _ => fresh_sources.push(name),
                     }
@@ -912,7 +936,7 @@ pub async fn run(
             pbf_size_gb,
             ssd,
             concurrent_imports: config.project.effective_max_concurrent_imports(),
-            database_url: db_url.to_string(),
+            pg_conn: pg_conn.clone(),
             effective_schema: effective_schema.clone(),
             pbf_path: pbf_path.clone(),
             style_path,
@@ -927,7 +951,7 @@ pub async fn run(
             Arc::clone(&mp),
             ImportSourceArgs {
                 source_name: name.to_string(),
-                db_url: db_url.to_string(),
+                pg_conn: pg_conn.clone(),
                 effective_schema,
                 srid,
                 argv,
@@ -978,7 +1002,7 @@ pub async fn run(
                             pbf_size_gb,
                             ssd,
                             concurrent_imports: config.project.effective_max_concurrent_imports(),
-                            database_url: db_url.to_string(),
+                            pg_conn: pg_conn.clone(),
                             effective_schema: effective_schema.clone(),
                             pbf_path: dl.pbf_path.clone(),
                             style_path: style_path.clone(),
@@ -993,7 +1017,7 @@ pub async fn run(
                             Arc::clone(&mp),
                             ImportSourceArgs {
                                 source_name: dl.source_name,
-                                db_url: db_url.to_string(),
+                                pg_conn: pg_conn.clone(),
                                 effective_schema,
                                 srid,
                                 argv,
@@ -1093,7 +1117,7 @@ pub async fn run(
 
         let log_path = log_dir.join(format!("{}-update.log", name.replace('/', "-")));
 
-        let env_vars = vec![
+        let extra_env_vars = vec![
             ("OSMPRJ_SCHEMA".to_string(), effective_schema.clone()),
             (
                 "OSMPRJ_SRID".to_string(),
@@ -1107,11 +1131,11 @@ pub async fn run(
         spinner.enable_steady_tick(std::time::Duration::from_millis(250));
 
         match replication_update(
-            db_url,
+            &pg_conn,
             &effective_schema,
             style_path.as_ref(),
             max_diff_size_mb,
-            &env_vars,
+            &extra_env_vars,
             &log_path,
             verbose,
         )

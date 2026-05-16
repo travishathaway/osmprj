@@ -12,8 +12,7 @@ osmprj is configured via `osmprj.toml` in your project directory. The file is cr
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `database_url` | string | — | PostgreSQL connection URL. Required for `sync` and `status`. Avoid storing passwords here if the file is committed to version control — use `database_url_command` or `OSMPRJ_DATABASE_URL` instead. |
-| `database_url_command` | string | — | Shell command whose stdout is used as the full database URL. Runs via `sh -c` on Unix or `cmd /C` on Windows. Takes precedence over `database_url` when set. |
+| `database_url` | string | — | PostgreSQL connection URL. Required for `sync` and `status`. Avoid storing passwords here if the file is committed to version control — use `OSMPRJ_DATABASE_URL` instead. |
 | `data_dir` | string | OS cache dir | Directory for downloaded PBF files. |
 | `log_dir` | string | `./logs` | Directory for osm2pgsql log files. |
 | `ssd` | bool | `true` | Set to `false` if `data_dir` is on spinning disk. Raises the flat-nodes threshold from 8 GB to 30 GB. |
@@ -33,19 +32,8 @@ osmprj is configured via `osmprj.toml` in your project directory. The file is cr
 [project]
 # PostgreSQL connection URL.
 # WARNING: avoid storing passwords here if osmprj.toml is committed to version control.
-# Use OSMPRJ_DATABASE_URL or database_url_command instead (see below).
+# Use OSMPRJ_DATABASE_URL or a .env file instead (see Credential Resolution Order below).
 database_url = "postgres://user@localhost/osm"
-
-# Shell command whose stdout is used as the full database URL.
-# Takes precedence over database_url when set.
-# OSMPRJ_DATABASE_URL environment variable takes precedence over both.
-#
-# Examples:
-#   database_url_command = "pass show osmprj/db-url"
-#   database_url_command = "op read op://Personal/osmprj-db/url"
-#   database_url_command = "gpg --quiet --decrypt ~/.osmprj-db-url.gpg"
-#   database_url_command = "aws secretsmanager get-secret-value --secret-id osmprj/db --query SecretString --output text"
-# database_url_command = "pass show osmprj/db-url"
 
 # Directory for downloaded PBF files.
 # Default: <OS cache dir>/osmprj/geofabrik/
@@ -102,29 +90,7 @@ OSMPRJ_DATABASE_URL=postgres://user:pass@localhost/osm
 All variables in `.env` are loaded into osmprj's environment, so `OSMPRJ_THEME_PATH`, `NO_COLOR`, and any other supported env vars work here too.
 :::
 
-### 3. `database_url_command` in `osmprj.toml`
-
-osmprj runs the command via the system shell and reads the URL from stdout. Use this to integrate with your existing secret manager.
-
-```toml
-[project]
-database_url_command = "pass show osmprj/db-url"
-```
-
-| Tool | Example |
-|---|---|
-| `pass` (Unix Password Manager) | `pass show osmprj/db-url` |
-| 1Password CLI | `op read op://Personal/osmprj-db/url` |
-| GPG-encrypted file | `gpg --quiet --decrypt ~/.osmprj-db-url.gpg` |
-| AWS Secrets Manager | `aws secretsmanager get-secret-value --secret-id osmprj/db --query SecretString --output text` |
-| HashiCorp Vault | `vault kv get -field=url secret/osmprj/db` |
-| Shell script | `/home/user/.config/osmprj/get-db-url.sh` |
-
-:::tip
-In headless/CI environments, commands must be non-interactive (no passphrase prompts). Use the `OSMPRJ_DATABASE_URL` env var or `.env` file instead if your secret manager requires user interaction.
-:::
-
-### 4. `database_url` in `osmprj.toml`
+### 3. `database_url` in `osmprj.toml`
 
 The fallback. Safe to use when the URL contains no password (e.g. local trust auth) or in a private repository.
 
@@ -133,4 +99,4 @@ The fallback. Safe to use when the URL contains no password (e.g. local trust au
 database_url = "postgres://postgres@localhost/osm"
 ```
 
-For a narrative walkthrough of all four methods, see the [Storing Credentials Securely](/docs/guides/storing-credentials) guide.
+For a narrative walkthrough of all methods, see the [Storing Credentials Securely](/docs/guides/storing-credentials) guide.

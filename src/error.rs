@@ -67,6 +67,13 @@ pub enum OsmprjError {
     )]
     SchemaWithMultipleIds,
 
+    #[error("Invalid database URL: {message}")]
+    #[diagnostic(
+        code(osmprj::invalid_database_url),
+        help("Ensure the database URL is in the form postgresql://user:pass@host:port/dbname")
+    )]
+    InvalidDatabaseUrl { message: String },
+
     #[error("No database URL configured")]
     #[diagnostic(
         code(osmprj::no_database_url),
@@ -78,26 +85,12 @@ pub enum OsmprjError {
     )]
     NoDatabaseUrl,
 
-    #[error("Credential command failed: {message}")]
-    #[diagnostic(
-        code(osmprj::credential_command_failed),
-        help("Check that the command in `database_url_command` exits with status 0 and prints a valid database URL to stdout.")
-    )]
-    CredentialCommandFailed { message: String },
-
-    #[error("Credential command produced no output")]
-    #[diagnostic(
-        code(osmprj::credential_command_empty),
-        help("The command in `database_url_command` ran successfully but printed nothing. It must print a valid database URL to stdout.")
-    )]
-    CredentialCommandEmpty,
-
     #[error("Could not connect to database: {message}")]
     #[diagnostic(
         code(osmprj::db_connect_failed),
         help(
-            "Check that PostgreSQL is running and reachable at the configured URL.\n\
-             \n  Tip: run `psql \"{url}\"` to test the connection directly."
+            "Check that PostgreSQL is running and verify your database credentials.\n\
+             \n  Ensure the host, port, database name, username, and password are correct."
         )
     )]
     DatabaseConnectFailed { message: String, url: String },

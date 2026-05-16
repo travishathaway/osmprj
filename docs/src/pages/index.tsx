@@ -80,9 +80,7 @@ function FeatureCards() {
   return (
     <section className="features">
       <div className="features__inner">
-        <div className="features__head">
-          <h2 className="features__title" style={{textAlign: "center"}}>Install</h2>
-        </div>
+        <h4 style={{textAlign: "center"}}>Install with the following command:</h4>
         <div className="term features__install_card">
           <div className="term__bar">
             <div className="term__dots">

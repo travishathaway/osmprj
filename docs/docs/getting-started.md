@@ -51,7 +51,10 @@ The typical workflow is three commands:
 
 ```bash
 # 1. Create a project file in the current directory
-osmprj init
+osmprj init --db postgresql://user@localhost:5432/db
+
+# 1a. Optional: If using a password, save to an .env file
+echo "OSMPRJ_DATABASE_URL=postgresql://user:pass@localhost:5432/db" > .env
 
 # 2. Add a Geofabrik region
 osmprj add germany --theme shortbread
@@ -61,7 +64,7 @@ osmprj sync
 ```
 
 :::warning
-**Do not store database passwords in `osmprj.toml`.** This file is typically committed to version control, which would expose your credentials. See the [Storing Credentials Securely](guides/storing-credentials) guide.
+**Avoid storing database passwords in `osmprj.toml`.** If this file is committed to version control, it could risk exposing your credentials. See the [Storing Credentials Securely](guides/storing-credentials) guide for more information on best practices.
 :::
 
 ### What happens on first run

@@ -45,11 +45,11 @@ conda create -n osmprj -c gis-forge -c conda-forge osmprj
 
 ## Quick Start
 
-The typical workflow is: initialise a project, add one or more data sources, then sync.
+The typical workflow is: initialize a project, add one or more data sources, then sync.
 
 ```bash
 # 1. Create a project file in the current directory
-osmprj init
+osmprj init --db postgresql://user@localhost:5432/db
 
 # 2. Add a Geofabrik region (uses shortbread theme)
 osmprj add germany --theme shortbread
@@ -62,9 +62,9 @@ osmprj sync
 ```
 
 > [!WARNING]
-> **Do not store database passwords in `osmprj.toml`.** The file is typically committed to version control, which would expose credentials. Instead, provide the database URL via the `OSMPRJ_DATABASE_URL` environment variable or the `database_url_command` config field. See the [Credential Resolution Order](#credential-resolution-order) section for details.
+> **Avoid storing database passwords in `osmprj.toml`.** Instead, we recommend using the [.pgpass](https://www.postgresql.org/docs/current/libpq-pgpass.html) file. See the [Storing Credentials Securely](https://osmprj.dev/docs/guides/storing-credentials) guide for more details.
 
-On the first run, `sync` downloads the PBF from Geofabrik, auto-tunes the `osm2pgsql` parameters for your system, and initialises replication. On subsequent runs it applies only the changes since the last update.
+On the first run, `sync` downloads the PBF from Geofabrik, auto-tunes the `osm2pgsql` parameters for your system, and initializes replication. On subsequent runs it applies only the changes since the last update.
 
 ---
 
@@ -88,13 +88,12 @@ For full usage details, flags, and examples, see the [Command Reference](https:/
 osmprj is configured via `osmprj.toml` in your project directory. Key fields:
 
 - `database_url` — PostgreSQL connection URL
-- `database_url_command` — shell command whose stdout is used as the database URL (preferred for secrets)
 - `data_dir` — directory for downloaded PBF files (default: OS cache dir)
 - `log_dir` — directory for log files (default: `./logs`)
 - `ssd` — set to `false` if `data_dir` is on spinning disk (default: `true`)
 - `max_diff_size_mb` — maximum replication diff size in MB
 
-> **Credential resolution order:** `OSMPRJ_DATABASE_URL` env var → `.env` file → `database_url_command` → `database_url` in `osmprj.toml`
+> **Credential resolution order:** `OSMPRJ_DATABASE_URL` env var → `.env` file → `database_url` in `osmprj.toml`
 
 For the full configuration reference, see [Configuration](https://osmprj.dev/docs/reference/configuration) on the docs site.
 
@@ -102,7 +101,7 @@ For the full configuration reference, see [Configuration](https://osmprj.dev/doc
 
 ## Contributing
 
-Contributions are welcome. osmprj is in early development so there is plenty of room to help.
+Contributions are welcome. This project is still early in development so there is plenty of room to help.
 
 ### Reporting Bugs
 

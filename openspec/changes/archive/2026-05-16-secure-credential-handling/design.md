@@ -1,98 +1,88 @@
 ## Context
 
-osmprj currently reads the PostgreSQL connection URL exclusively from `database_url` in `osmprj.toml`. The field is typed `Option<String>` and used directly in all commands that require a database connection (`status`, `sync`, `add`, `remove`). There is no indirection layer — whatever is in the file is what gets passed to `tokio-postgres::connect()`.
+`osmprj` currently uses `tokio-postgres` (pure Rust, no libpq) as its database driver. Database credentials are stored in the URL (`postgresql://user:secret@host/db`) and forwarded as-is to child processes (`osm2pgsql`, `osm2pgsql-replication`) via CLI arguments. This creates three credential exposure vectors:
 
-The problem: `osmprj.toml` is a project file that users are expected to commit to version control. A plain-text password in this file is a credential leak waiting to happen.
+1. **`ps aux`** — plaintext password visible in argv to all users on the machine
+2. **Log files** — the `[command] osm2pgsql ... --database=<url>` header written at the start of every sync embeds the full URL
+3. **Terminal output** — `osmprj status` prints the raw URL including the password; verbose sync mode echoes the command line
 
-The fix is an `effective_database_url()` method on `ProjectSettings` that implements a three-tier resolution chain. All existing command code switches to this single call site.
+Additionally, users who manage credentials via `~/.pgpass` cannot use that mechanism for osmprj's own connections because `tokio-postgres` does not implement pgpass parsing.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Allow the database URL to be sourced from `OSMPRJ_DATABASE_URL` env var (highest priority)
-- Allow the database URL to be sourced from an arbitrary shell command (`database_url_command`)
-- Maintain full backward compatibility — `database_url` in `osmprj.toml` continues to work exactly as before
-- Document all three mechanisms clearly in the README and Quick Start guide
-- No new external Rust dependencies
+- Passwords never appear in child process argv (not visible via `ps`, not logged)
+- `~/.pgpass` and `$PGPASSFILE` work for osmprj's own DB connections
+- `osmprj status` displays the URL with password masked as `****`
+- Error messages do not expose the raw URL or suggest `psql "<url>"`
+- Log files do not contain passwords
+- `PGPASSWORD`, `PGUSER`, `PGHOST`, `PGPORT`, `PGDATABASE` env vars respected by osmprj itself (via sqlx) and by child processes (via inherited env)
 
 **Non-Goals:**
-- OS keychain integration (deferred, not needed for Phase 1/2)
-- `.env` file auto-loading (env vars work without it; complexity not justified)
-- Partial URL injection (password-only substitution into a URL template)
-- TLS/SSL support for the database connection (separate concern)
+- Supporting `pgpass` as a new `osmprj.toml` config key
+- Changing the `OSMPRJ_DATABASE_URL` / `database_url` precedence rules
+- Encrypting credentials at rest (out of scope)
+- Supporting credential stores (Vault, Keychain, etc.)
 
 ## Decisions
 
-### Decision 1: Resolution order is env var → command → inline config
+### Decision 1: Replace `tokio-postgres` with `sqlx` for osmprj's own connections
 
-```
-OSMPRJ_DATABASE_URL (env)
-        │
-        ▼  not set?
-database_url_command (runs command, trims stdout, uses as URL)
-        │
-        ▼  not configured?
-database_url (inline string in osmprj.toml)
-        │
-        ▼  not set?
-None  (caller decides how to handle — existing behavior preserved)
-```
+**Choice**: `sqlx` with `features = ["runtime-tokio", "postgres"]`.
 
-**Why this order?** Env vars are the universally understood "override everything" mechanism, familiar from 12-factor app conventions. They are appropriate for CI and scripted environments. The command is a more structured opt-in that lives in the config file. The inline value is the legacy path.
+**Rationale**: `sqlx::PgConnectOptions` implements the full libpq credential resolution chain natively — `PGPASSWORD`, `PGPASSFILE`, `~/.pgpass` (including file permission checks on Unix), and all `PG*` environment variables. Implementing this manually against `tokio-postgres` would be ~100 lines of correct-but-non-standard Rust with edge cases (percent-encoded passwords, IPv6 hosts, Windows path, file permission check). The cost is higher compile times and a moderately larger binary; for a CLI tool this is acceptable.
 
-**Alternative considered:** Command before env var. Rejected — env vars are the de facto override mechanism and should always win. A user running `OSMPRJ_DATABASE_URL=... osmprj sync` expects the env var to take effect regardless of what's in the file.
+The `src/db.rs` API surface is small (5 functions, 68 lines). Migration is mechanical: `tokio-postgres::Client` → `sqlx::PgPool` or single `PgConnection`, `client.query_opt()` → `sqlx::query().fetch_optional()`, `client.execute()` → `sqlx::query().execute()`. The manual connection driver spawn (`tokio::spawn(connection.await)`) disappears — sqlx manages this internally.
 
-### Decision 2: `database_url_command` runs via the system shell
+`sqlx`'s runtime query API (not the compile-time `query!` macros) is used throughout to avoid the requirement for a live database at compile time.
 
-The command string is passed to `sh -c "<command>"` on Unix and `cmd /C "<command>"` on Windows, using `std::process::Command`. stdout is captured, trimmed of leading/trailing whitespace, and used as the URL.
+**Alternative considered**: Implement `.pgpass` parsing manually in `tokio-postgres`. Rejected — adds maintenance burden and non-standard behaviour. The `url` crate would also be needed for correct URL parsing, adding another dependency with no other benefit.
 
-**Why shell execution?** Real-world credential commands rely on shell features: pipes, redirection, variable expansion, `$PATH` lookup. Running through the shell makes all common tools (pass, op, aws, gpg, vault) work out of the box with no extra escaping by the user.
+### Decision 2: Pass credentials to child processes via libpq environment variables
 
-**Alternative considered:** `execvp`-style direct exec (splitting the string on whitespace). Rejected — breaks multi-word arguments, pipelines, and tools that need `$PATH`. Shell execution matches what Git, Docker, and AWS CLI do for their credential helpers.
+**Choice**: Parse the resolved database URL into components (`PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`) and inject them into the child process environment via `tokio::process::Command::env()`. Pass `--database=postgresql://host:port/dbname` (credential-free) as the CLI argument.
 
-**Alternative considered:** A dedicated `[credentials]` TOML section with typed fields per secret manager. Rejected — adds ongoing maintenance burden for every tool we'd want to support. The command approach is open-ended and future-proof.
+**Rationale**: `osm2pgsql` and `osm2pgsql-replication` both link libpq and read the standard `PG*` environment variables. Credentials in env vars are not visible in `ps aux` output (argv is world-readable on Linux; `/proc/<pid>/environ` is owner-readable only). The logged `[command]` line will contain only the credential-free URL form, eliminating log file exposure.
 
-### Decision 3: `effective_database_url()` is a free function / method on `ProjectSettings`, not a command-level concern
+`PGPASSWORD` is set only when a password is present in the URL. If the user has no password in their URL (relying on `.pgpass` or trust auth), `PGPASSWORD` is not set and the child process falls through to its own libpq credential lookup, including `~/.pgpass`.
 
-Resolution logic lives in `src/config.rs` as a method on `ProjectSettings`. Commands call `config.project.effective_database_url()?` instead of reading `config.project.database_url` directly.
+**Alternative considered**: Use a temp pgpass file. More secure than `PGPASSWORD` but adds complexity (temp file lifecycle, permissions, cleanup on panic). Deferred as a future hardening step.
 
-**Why here?** Keeps resolution logic in one place. Commands should not each implement their own fallback chain. Placing it in `config.rs` also makes it straightforward to unit test without spinning up a database.
+**Alternative considered**: Pass `PGPASSFILE` to child processes. Only useful if osmprj generates a temp pgpass file (see above). Not needed for the current scope.
 
-**Alternative considered:** A module-level free function in a new `src/credentials.rs`. Reasonable, but adds a file for logic that is directly tied to `ProjectSettings`. Can be refactored out later if it grows.
+### Decision 3: URL parsing for credential extraction
 
-### Decision 4: Command execution is synchronous (blocking)
+**Choice**: Use the `url` crate to parse the database URL into components before passing to child processes and for masking display output.
 
-`std::process::Command` (blocking) is used rather than `tokio::process::Command` (async). The credential command runs once at startup, before any async work begins.
+**Rationale**: The `url` crate correctly handles percent-encoded passwords, IPv6 bracketed hosts, and query-string host overrides. String splitting on `://` and `@` is fragile. `sqlx` itself depends on `url` (it's already a transitive dependency after the sqlx migration), so adding it directly has zero net dependency cost.
 
-**Why?** Credential resolution happens before the first DB connection attempt, which is itself the beginning of meaningful async work. A blocking call at this point is simpler and avoids the need to be inside a Tokio runtime context during config loading. Command execution should complete in milliseconds.
+### Decision 4: Credential masking in status output
 
-### Decision 5: Error on non-zero exit or empty output
+**Choice**: A `mask_db_url(url: &str) -> String` utility in `src/output.rs` (or a new `src/url_utils.rs`) that replaces the password segment with `****`. Applied to all terminal-facing displays of the URL. The raw URL is never printed.
 
-If `database_url_command` is set and the command:
-- Exits with a non-zero status → error with the command's stderr included in the message
-- Produces empty stdout (after trim) → error with a clear message
-
-**Why not silently fall through to `database_url`?** If the user configured a command and it fails, silently using the inline URL (which may be absent or stale) would be a confusing, hard-to-debug failure mode. Fail loudly.
+**Rationale**: Users need to see enough of the URL (host, port, database, user) to diagnose misconfiguration. Masking only the password preserves this. The `psql` tip (which required the unmasked URL for copy-paste) is removed; users are instead prompted to verify credentials.
 
 ## Risks / Trade-offs
 
-**[Risk] Shell injection via `database_url_command`** → The command is fully trusted user input from `osmprj.toml`, similar to how Makefile targets, npm scripts, and Cargo build scripts work. osmprj does not sanitize the command. This is acceptable because the file is under the user's control; it is not an attack surface from untrusted input. Document clearly that the command should be kept under the same access controls as the project file.
-
-**[Risk] Command hangs indefinitely** → Credential helper commands are normally fast (sub-second). A timeout is not implemented in Phase 1. If a user's command hangs (e.g., waiting for a passphrase on a non-TTY), osmprj will hang. Mitigation: document that commands must be non-interactive in headless use. A configurable timeout can be added in a follow-up.
-
-**[Risk] Windows path and shell differences** → `cmd /C` is used on Windows. Commands that work on Unix (`pass`, `gpg`) may not be available on Windows. Mitigation: the env var path (Phase 1) requires no shell at all and is fully cross-platform. Document platform-specific examples.
-
-**[Trade-off] Blocking command execution** → Described in Decision 4. Acceptable given the call site.
+- **Compile time regression** — `sqlx` is a large crate with macro machinery. Even using only runtime queries, compile times will increase. → Mitigation: use `sqlx` with only `runtime-tokio` and `postgres` features; avoid `sqlx-macros` unless explicitly needed.
+- **`PGPASSWORD` env var still readable by process owner** — `/proc/<pid>/environ` on Linux is readable by the process owner. This is significantly better than argv (readable by all users) but not hermetic. → Accepted trade-off; documented in user-facing materials if needed.
+- **URL parsing edge cases** — URLs with no host (Unix socket paths, `%2F`-encoded), no port, or query-string overrides need correct handling in the credential-extraction path. → Mitigated by using the `url` crate rather than string splitting.
+- **`tokio-postgres` removal** — Any future code that imports `tokio_postgres` directly will break. → Impact is limited to `src/db.rs` and its callers; the change is contained.
 
 ## Migration Plan
 
-No migration required. `database_url` continues to work without any changes to existing `osmprj.toml` files. Users who want the new behavior opt in by:
-1. Removing (or not setting) `database_url`, and setting `OSMPRJ_DATABASE_URL` in their environment, or
-2. Adding `database_url_command` to their `[project]` block.
+1. Add `sqlx` and `url` to `Cargo.toml`; remove `tokio-postgres`.
+2. Rewrite `src/db.rs` using `sqlx`. Keep function names stable where possible to minimise caller churn.
+3. Introduce URL parsing utility (`mask_db_url`, `parse_db_url` → `PgConnParams`).
+4. Update `src/tuner.rs` to accept `PgConnParams` instead of a raw URL string; drop `--database=<url>` arg.
+5. Update `src/commands/sync.rs` subprocess calls to inject env vars.
+6. Update `src/commands/status.rs` to use masked URL; remove psql tip.
+7. Update `src/error.rs` to remove psql tip from help text.
+8. Update integration tests to assert passwords do NOT appear in stdout.
+9. Build and run full test suite.
 
-No database schema changes. No lock file changes.
+Rollback: revert to `tokio-postgres` by reverting `Cargo.toml` and `src/db.rs`. All other changes (env var injection, masking) are independent and low-risk.
 
 ## Open Questions
 
-- Should a `--no-credential-command` flag be added to allow bypassing the command for debugging purposes? Probably not needed initially — unsetting the env var or commenting out the config key is sufficient.
-- Should the resolved URL be redacted in log output and `osmprj status` display? Currently `status` prints the URL. Worth a follow-up to ensure passwords are not echoed back in output.
+- None — design is sufficiently clear to proceed to implementation.

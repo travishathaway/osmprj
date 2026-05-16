@@ -32,5 +32,5 @@ database_url = "postgres://postgres@localhost/osm"
 ```
 
 :::tip
-If your connection URL contains a password, prefer `OSMPRJ_DATABASE_URL` (env var) or `database_url_command` instead of storing it in this file. See [Storing Credentials Securely](/docs/guides/storing-credentials).
+If your connection URL contains a password, prefer `OSMPRJ_DATABASE_URL` (env var) or a `.env` file instead of storing it in this file. See [Storing Credentials Securely](/docs/guides/storing-credentials).
 :::

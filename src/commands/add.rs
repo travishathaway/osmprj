@@ -94,12 +94,7 @@ pub async fn run(
     let db_url = config.project.effective_database_url()?;
 
     if let Some(ref url) = db_url {
-        db::connect(url)
-            .await
-            .map_err(|e| OsmprjError::DatabaseConnectFailed {
-                message: e.to_string(),
-                url: url.clone(),
-            })?;
+        db::connect(url).await?;
     }
 
     for (source_name, pbf_path) in &sources_to_add {
@@ -129,7 +124,7 @@ pub async fn run(
     // Create schemas in the database. If a URL is configured we already
     // verified connectivity above, so a second connect here should succeed.
     // Connect once and reuse the client for all sources.
-    let db_client = match db_url {
+    let mut db_client = match db_url {
         None => None,
         Some(ref url) => match db::connect(url).await {
             Ok(client) => Some(client),
@@ -154,12 +149,12 @@ pub async fn run(
         match db_client {
             None => {
                 println!(
-                    "  hint: no database URL configured — set OSMPRJ_DATABASE_URL, add \
-                     database_url_command, or add database_url to osmprj.toml to create the \
+                    "  hint: no database URL configured — set OSMPRJ_DATABASE_URL or add \
+                     database_url to osmprj.toml to create the \
                      schema automatically"
                 );
             }
-            Some(ref client) => match db::create_schema(client, &effective_schema).await {
+            Some(ref mut client) => match db::create_schema(client, &effective_schema).await {
                 Ok(()) => println!("  created schema '{effective_schema}'"),
                 Err(e) => eprintln!("  warning: schema creation failed: {e}"),
             },

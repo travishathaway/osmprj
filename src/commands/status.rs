@@ -1,6 +1,7 @@
 use crate::config::ProjectConfig;
 use crate::db;
 use crate::output;
+use crate::url_utils::mask_db_url;
 
 pub async fn run(config: &ProjectConfig) -> Result<(), crate::error::OsmprjError> {
     let sources = &config.sources;
@@ -9,31 +10,34 @@ pub async fn run(config: &ProjectConfig) -> Result<(), crate::error::OsmprjError
     let url = config.project.effective_database_url()?;
     let url = url.as_deref();
 
-    let client = match url {
+    let mut client = match url {
         None => {
             println!("  database:  not configured");
             println!(
                 "             Add database_url to [project] in osmprj.toml,\n\
-                 \n             set the OSMPRJ_DATABASE_URL environment variable,\n\
-                 \n             or configure database_url_command to enable connection checks"
+                 \n             or set the OSMPRJ_DATABASE_URL environment variable."
             );
             print_sources_no_db(config);
             return Ok(());
         }
         Some(u) => match db::connect(u).await {
             Ok(c) => {
-                println!("  database:  {u}  {} connected", output::icon_success());
+                println!(
+                    "  database:  {}  {} connected",
+                    mask_db_url(u),
+                    output::icon_success()
+                );
                 c
             }
             Err(e) => {
                 println!(
-                    "  database:  {u}  {} connection failed",
+                    "  database:  {}  {} connection failed",
+                    mask_db_url(u),
                     output::icon_error()
                 );
                 println!("             {e}");
                 println!(
-                    "             Check that PostgreSQL is running and the URL is correct.\n\
-                     \n             Tip: run `psql \"{u}\"` to test the connection directly."
+                    "             Check that PostgreSQL is running and verify your database credentials."
                 );
                 print_sources_no_db(config);
                 return Ok(());
@@ -67,7 +71,9 @@ pub async fn run(config: &ProjectConfig) -> Result<(), crate::error::OsmprjError
 
     for (name, source) in sorted {
         let schema = source.effective_schema(name);
-        let exists = db::schema_exists(&client, &schema).await.unwrap_or(false);
+        let exists = db::schema_exists(&mut client, &schema)
+            .await
+            .unwrap_or(false);
         let indicator = if exists {
             output::icon_success().to_string()
         } else {

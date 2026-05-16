@@ -1,10 +1,5 @@
-# rust-db Specification
+## MODIFIED Requirements
 
-## Purpose
-
-This module contains the database API for interacting with configured PostgreSQL databases.
-
-## Requirements
 ### Requirement: Async connection helper
 The system SHALL provide a `connect` async function in `src/db.rs` that accepts a database URL `&str` and returns a live database connection. The implementation SHALL use `sqlx` with the tokio runtime and postgres driver, which natively supports `~/.pgpass`, `$PGPASSFILE`, `PGPASSWORD`, and other libpq environment variables.
 
