@@ -132,7 +132,7 @@ const config: Config = {
             },
             {
               label: 'Configuration',
-              to: '/docs/guides/configuration',
+              to: '/docs/reference/configuration',
             },
             {
               label: 'Themes',

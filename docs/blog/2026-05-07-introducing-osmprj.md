@@ -23,7 +23,13 @@ I have for contributing back to osm2pgsql-themepark.
 
 ### Installing
 
-This easiest way to get osmprj is by installing it as a conda package with [pixi](https://pixi.sh):
+The easiest way to get osmprj is using the custom installer:
+
+```bash
+curl -fsSL https://osmprj.dev/install.sh | bash
+```
+
+But, it's also possible to install it as a conda package with [pixi](https://pixi.sh):
 
 ```bash
 pixi global install -c gis-forge -c conda-forge osmprj
@@ -113,7 +119,8 @@ I'm one of the conda maintainers!).
 
 Right now, this is being distributed via my own [gis-forge](https://anaconda.org/gis-forge) channel,
 but I plan on moving it to the more popular [conda-forge](https://conda-forge.org) channel once
-the project stabilizes and leaves alpha.
+the project stabilizes and leaves alpha. The custom [installer](https://osmprj.dev/install.sh)
+was created using [pixi-pack](https://github.com/quantco/pixi-pack).
 
 ### Themepark
 
