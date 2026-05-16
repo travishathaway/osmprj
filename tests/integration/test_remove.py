@@ -27,6 +27,12 @@ SOURCE_NAME = "testregion"
 SCHEMA_NAME = "testregion"
 
 
+@pytest.fixture(autouse=True)
+def clear_osmprj_database_url(monkeypatch):
+    """Prevent inherited env credentials from overriding explicit test DB URLs."""
+    monkeypatch.delenv("OSMPRJ_DATABASE_URL", raising=False)
+
+
 @pytest.fixture(scope="module")
 def remove_project(run_cmd, pg_e2e, tmp_path_factory):
     """Module-scoped project with a source added and its schema seeded in the DB.
