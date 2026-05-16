@@ -35,7 +35,7 @@
 ## 4. Verification
 
 - [x] 4.1 Validate `release.yml` syntax using `actionlint` (available via `pixi run --environment dev` or install globally) or push to a test branch and check the Actions tab
-- [ ] 4.2 Run `scripts/install.sh` on a clean Linux environment (a Docker container or VM) and confirm `osmprj` appears on `PATH`, `osmprj --help` succeeds, and `osmprj themes list` lists themes correctly
-- [ ] 4.3 Run `scripts/install.sh` on macOS `osx-arm64` and confirm the same
-- [ ] 4.4 Re-run `scripts/install.sh` on a machine where it was already run and confirm no duplicate lines are added to the rc file
-- [ ] 4.5 Create a test GitHub release (pre-release tag) and confirm the workflow runs to completion and all three release assets appear (`osmprj-linux-64-installer.sh`, `osmprj-osx-arm64-installer.sh`, `install.sh`)
+- [x] 4.2 Run `scripts/install.sh` on a clean Linux environment (a Docker container or VM) and confirm `osmprj` appears on `PATH`, `osmprj --help` succeeds, and `osmprj themes list` lists themes correctly
+- [x] 4.3 Run `scripts/install.sh` on macOS `osx-arm64` and confirm the same
+- [x] 4.4 Re-run `scripts/install.sh` on a machine where it was already run and confirm no duplicate lines are added to the rc file
+- [x] 4.5 Create a test GitHub release (pre-release tag) and confirm the workflow runs to completion and all three release assets appear (`osmprj-linux-64-installer.sh`, `osmprj-osx-arm64-installer.sh`, `install.sh`)

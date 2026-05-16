@@ -41,3 +41,18 @@ The system SHALL exit with a non-zero code if a source with the given name alrea
 #### Scenario: Duplicate source name
 - **WHEN** `osmprj.toml` already has a `[sources.germany]` block and the user runs `osmprj add germany`
 - **THEN** the system prints an error and exits with a non-zero code without modifying the file
+
+### Requirement: add verifies the database connection before writing to osmprj.toml
+When a database URL is configured, the system SHALL attempt to connect to the database before making any changes to `osmprj.toml`. If the connection fails, the system SHALL exit with a non-zero code and leave `osmprj.toml` unmodified.
+
+#### Scenario: Connection failure prevents source from being registered
+- **WHEN** `database_url` (or `OSMPRJ_DATABASE_URL`) points to an unreachable database and the user runs `osmprj add germany`
+- **THEN** the system exits with a non-zero code and `osmprj.toml` does not contain a `[sources.germany]` block
+
+#### Scenario: No database URL skips the connection check
+- **WHEN** no database URL is configured and the user runs `osmprj add germany`
+- **THEN** the source is written to `osmprj.toml` and the command exits with code 0, printing a hint about configuring a database URL
+
+#### Scenario: Successful connection allows the add to proceed
+- **WHEN** the database URL points to a reachable database and the user runs `osmprj add germany`
+- **THEN** the source is written to `osmprj.toml`, the schema is created in the database, and the command exits with code 0

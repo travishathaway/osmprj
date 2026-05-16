@@ -67,12 +67,20 @@ pub enum OsmprjError {
     )]
     SchemaWithMultipleIds,
 
+    #[error("Invalid database URL: {message}")]
+    #[diagnostic(
+        code(osmprj::invalid_database_url),
+        help("Ensure the database URL is in the form postgresql://user:pass@host:port/dbname")
+    )]
+    InvalidDatabaseUrl { message: String },
+
     #[error("No database URL configured")]
     #[diagnostic(
         code(osmprj::no_database_url),
         help(
             "Add database_url to the [project] section in osmprj.toml:\n\
-             \n  database_url = \"postgres://user:pass@localhost/dbname\""
+             \n  database_url = \"postgres://user:pass@localhost/dbname\"\n\
+             \nOr set the OSMPRJ_DATABASE_URL environment variable."
         )
     )]
     NoDatabaseUrl,
@@ -81,8 +89,8 @@ pub enum OsmprjError {
     #[diagnostic(
         code(osmprj::db_connect_failed),
         help(
-            "Check that PostgreSQL is running and reachable at the configured URL.\n\
-             \n  Tip: run `psql \"{url}\"` to test the connection directly."
+            "Check that PostgreSQL is running and verify your database credentials.\n\
+             \n  Ensure the host, port, database name, username, and password are correct."
         )
     )]
     DatabaseConnectFailed { message: String, url: String },

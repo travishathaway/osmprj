@@ -35,3 +35,6 @@ jobs:
 
       - name: Slow end-to-end tests
         run: pixi run --environment dev pytest -m slow -v
+
+      - name: Unit tests
+        run: pixi run --environment dev test-unit

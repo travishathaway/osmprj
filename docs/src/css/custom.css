@@ -507,6 +507,57 @@ div[class*="codeBlockTitle"] {
   padding: 48px 24px 24px;
 }
 
+/* Three-column grid: brand (1.4fr) + link columns (1fr each) */
+.footer__inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 32px;
+  /* Override Docusaurus default row/flex layout on the links container */
+}
+
+/* Brand block — first column */
+.footer__brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.footer__brand-logo img {
+  height: 36px;
+  filter: brightness(0) invert(1) opacity(0.85);
+}
+
+.footer__brand-logo strong {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  color: #ECEFE0;
+}
+
+.footer__brand-tagline {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  max-width: 300px;
+  color: #C4C9B8;
+}
+
+/* Link columns */
+.footer__links {
+  /* Remove default row/flex so the grid takes over */
+  display: contents;
+}
+
+.footer__col {
+  /* Reset Infima column padding so the grid gap handles spacing */
+  padding: 0 !important;
+  max-width: none !important;
+  flex: none !important;
+  width: auto !important;
+}
+
 .footer__title {
   font-family: var(--font-mono);
   font-size: 13px;
@@ -514,10 +565,26 @@ div[class*="codeBlockTitle"] {
   color: #ECEFE0;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  margin: 0 0 12px 0;
+  /* Infima uses padding-bottom; reset it */
+  padding-bottom: 0 !important;
+  border-bottom: none !important;
+}
+
+.footer__items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.footer__item {
+  padding: 0;
 }
 
 .footer__link-item {
   color: #C4C9B8;
+  display: block;
+  padding: 4px 0;
   font-size: 14px;
 }
 
@@ -526,13 +593,30 @@ div[class*="codeBlockTitle"] {
   text-decoration: none;
 }
 
+/* Copyright / bottom bar */
+.footer__copy {
+  max-width: 1100px;
+  margin: 36px auto 0;
+  padding-top: 18px;
+  border-top: 1px solid #2C3320;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #7A8273;
+}
+
+/* Docusaurus default copyright class */
 .footer__copyright {
   font-family: var(--font-mono);
   font-size: 12px;
   color: #7A8273;
-  border-top: 1px solid #2C3320;
-  margin-top: 36px;
-  padding-top: 18px;
+}
+
+/* Responsive: collapse to single column below 768px */
+@media (max-width: 768px) {
+  .footer__inner {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ─── Hero section ────────────────────────────────────────────────── */
@@ -683,7 +767,7 @@ div[class*="codeBlockTitle"] {
 /* ─── Feature cards ───────────────────────────────────────────────── */
 
 .features {
-  padding: 80px 24px;
+  padding: 40px 24px;
   background: var(--bg);
   position: relative;
 }
@@ -732,6 +816,30 @@ div[class*="codeBlockTitle"] {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
+}
+
+.features__install_card {
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 1rem;
+}
+
+.features__install_card__extra_info {
+  text-align: center;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 4rem;
+}
+
+.features__install_card > .theme-code-block {
+  margin-bottom: 0;
+}
+
+.features__install_card .theme-code-block pre,
+.demo__code_block .theme-code-block pre {
+  font-size: 18px !important;
 }
 
 @media (max-width: 768px) {
@@ -868,11 +976,23 @@ div[class*="codeBlockTitle"] {
   display: block;
 }
 
+.term__dots span:nth-child(1) {
+  background: #FF5F57;
+}
+
+.term__dots span:nth-child(2) {
+  background: #FEBC2E;
+}
+
+.term__dots span:nth-child(3) {
+  background: #28C840;
+}
+
 .term pre {
   margin: 0;
   padding: 18px 20px;
   font-family: var(--font-code);
-  font-size: 14px;
+  font-size: 20px;
   line-height: 1.6;
   color: #ECEFE0;
   white-space: pre;

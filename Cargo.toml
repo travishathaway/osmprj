@@ -1,6 +1,6 @@
 [package]
 name = "osmprj"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 
 [[bin]]
@@ -10,7 +10,9 @@ path = "src/main.rs"
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
-tokio-postgres = "0.7"
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres"] }
+url = "2"
+percent-encoding = "2"
 toml = "0.8"
 toml_edit = "0.22"
 serde = { version = "1", features = ["derive"] }
@@ -19,14 +21,13 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls", "stream"], defau
 dirs = "5"
 indicatif = "0.18.4"
 console = "0.16.3"
-dialoguer = "0.12.0"
 thiserror = "2.0.18"
-anyhow = "1.0.102"
 miette = { version = "7.6.0", features = ["fancy"] }
 sysinfo = "0.33"
-futures = "0.3"
 md-5 = "0.10"
 chrono = { version = "0.4", features = ["serde"] }
 tempfile = "3"
-flate2 = "1"
-tar = "0.4"
+dotenvy = "0.15"
+# I'm not using these dependencies, but I might in the future
+# anyhow = "1.0.102"
+# dialoguer = "0.12.0"

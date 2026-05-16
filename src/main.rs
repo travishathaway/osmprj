@@ -7,6 +7,7 @@ mod lock;
 mod output;
 mod theme_registry;
 mod tuner;
+mod url_utils;
 
 use clap::{Args, ColorChoice, CommandFactory, FromArgMatches, Parser, Subcommand};
 use config::ProjectConfig;
@@ -122,6 +123,11 @@ fn early_color_choice() -> ColorChoice {
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
+    // Load .env from the current directory if present. Variables already set
+    // in the real environment take priority (dotenvy does not overwrite them).
+    // Silently ignored when .env does not exist.
+    dotenvy::dotenv().ok();
+
     miette::set_hook(Box::new(|_| {
         Box::new(
             miette::MietteHandlerOpts::new()

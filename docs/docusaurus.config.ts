@@ -44,11 +44,11 @@ const osmprjCodeThemeLight: PrismTheme = {
 
 const config: Config = {
   title: 'osmprj',
-  tagline: 'A friendly, modern tool for managing OpenStreetMap data with PostgreSQL',
+  tagline: 'A friendly, modern CLI for working with OpenStreetMap data in PostgreSQL',
   favicon: 'favicon.ico',
 
-  url: 'https://travishathaway.github.io',
-  baseUrl: '/osmprj/',
+  url: 'https://osmprj.dev',
+  baseUrl: '/',
 
   organizationName: 'travishathaway',
   projectName: 'osmprj',
@@ -93,7 +93,7 @@ const config: Config = {
       title: 'osmprj',
       logo: {
         alt: 'osmprj',
-        src: './img/osmprj-logo-small.svg',
+        src: 'img/osmprj-logo-small.svg',
         height: 36,
         width: 36
       },
@@ -130,6 +130,14 @@ const config: Config = {
               label: 'Getting Started',
               to: '/docs/getting-started',
             },
+            {
+              label: 'Configuration',
+              to: '/docs/reference/configuration',
+            },
+            {
+              label: 'Themes',
+              to: '/docs/guides/themes',
+            },
           ],
         },
         {
@@ -143,10 +151,18 @@ const config: Config = {
               label: 'Report an Issue',
               href: 'https://github.com/travishathaway/osmprj/issues',
             },
+            {
+              label: 'Sponsor',
+              href: 'https://github.com/sponsors/travishathaway',
+            },
+            {
+              label: 'Blog',
+              to: '/blog',
+            },
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Travis Hathaway. Built with Docusaurus.`,
+      copyright: `© ${new Date().getFullYear()} Travis Hathaway · Built with Docusaurus`,
     },
     prism: {
       theme: osmprjCodeThemeDark,

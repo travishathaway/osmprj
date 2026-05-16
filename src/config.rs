@@ -116,6 +116,22 @@ impl ProjectSettings {
             .map(MinOneUsize::get)
             .unwrap_or(1)
     }
+
+    /// Resolve the database URL using two-tier precedence:
+    ///
+    /// 1. `OSMPRJ_DATABASE_URL` environment variable (highest priority)
+    /// 2. `database_url` inline in `osmprj.toml` (fallback)
+    ///
+    /// Returns `Ok(None)` when neither source provides a URL.
+    pub fn effective_database_url(&self) -> Result<Option<String>, OsmprjError> {
+        // 1. Environment variable wins unconditionally.
+        if let Ok(url) = std::env::var("OSMPRJ_DATABASE_URL") {
+            return Ok(Some(url));
+        }
+
+        // 2. Inline value from osmprj.toml.
+        Ok(self.database_url.clone())
+    }
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -198,5 +214,46 @@ mod tests {
 
         let parsed: Result<ProjectConfig, toml::de::Error> = toml::from_str(input);
         assert!(parsed.is_err());
+    }
+
+    // ── effective_database_url tests ──────────────────────────────────────────
+    //
+    // These tests mutate the OSMPRJ_DATABASE_URL environment variable.
+    // Rust runs unit tests in parallel by default, so we use a static mutex to
+    // serialise all tests that touch this env var and prevent races.
+    static ENV_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    #[test]
+    fn effective_db_url_env_var_wins_over_inline() {
+        let _guard = ENV_MUTEX.lock().unwrap();
+        std::env::set_var("OSMPRJ_DATABASE_URL", "postgres://env:envpass@host/db");
+        let s = ProjectSettings {
+            database_url: Some("postgres://file:filepass@host/db".to_string()),
+            ..Default::default()
+        };
+        let result = s.effective_database_url().unwrap();
+        std::env::remove_var("OSMPRJ_DATABASE_URL");
+        assert_eq!(result, Some("postgres://env:envpass@host/db".to_string()));
+    }
+
+    #[test]
+    fn effective_db_url_inline_fallback() {
+        let _guard = ENV_MUTEX.lock().unwrap();
+        std::env::remove_var("OSMPRJ_DATABASE_URL");
+        let s = ProjectSettings {
+            database_url: Some("postgres://inline:pass@host/db".to_string()),
+            ..Default::default()
+        };
+        let result = s.effective_database_url().unwrap();
+        assert_eq!(result, Some("postgres://inline:pass@host/db".to_string()));
+    }
+
+    #[test]
+    fn effective_db_url_all_absent_returns_none() {
+        let _guard = ENV_MUTEX.lock().unwrap();
+        std::env::remove_var("OSMPRJ_DATABASE_URL");
+        let s = ProjectSettings::default();
+        let result = s.effective_database_url().unwrap();
+        assert_eq!(result, None);
     }
 }
