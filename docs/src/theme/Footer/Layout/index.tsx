@@ -1,16 +1,17 @@
 import React, {type ReactNode} from 'react';
 import clsx from 'clsx';
 import {ThemeClassNames} from '@docusaurus/theme-common';
+import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import type {Props} from '@theme/Footer/Layout';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 
 export default function FooterLayout({
   style,
   links,
-  logo,
   copyright,
 }: Props): ReactNode {
   const logoUrl = useBaseUrl('/img/osmprj-logo-small.svg');
+  const { siteConfig } = useDocusaurusContext();
 
   return (
     <footer
@@ -25,8 +26,7 @@ export default function FooterLayout({
             <strong>osmprj</strong>
           </div>
           <p className="footer__brand-tagline">
-            A small, single-purpose CLI for working with OpenStreetMap data in
-            PostgreSQL. GPL-3.0 licensed.
+            {siteConfig.tagline}. GPL-3.0 licensed.
           </p>
         </div>
 

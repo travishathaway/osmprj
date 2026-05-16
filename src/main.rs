@@ -122,6 +122,11 @@ fn early_color_choice() -> ColorChoice {
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
+    // Load .env from the current directory if present. Variables already set
+    // in the real environment take priority (dotenvy does not overwrite them).
+    // Silently ignored when .env does not exist.
+    dotenvy::dotenv().ok();
+
     miette::set_hook(Box::new(|_| {
         Box::new(
             miette::MietteHandlerOpts::new()

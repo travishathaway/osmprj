@@ -3,7 +3,7 @@ import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import Layout from '@theme/Layout';
-import { Highlight, themes } from "prism-react-renderer"
+import CodeBlock from '@theme/CodeBlock';
 import { Database, Map, Layers } from 'lucide-react';
 
 // ─── Feature card data ────────────────────────────────────────────────────────
@@ -50,15 +50,15 @@ function Hero() {
       <div className="hero__inner">
         <div className="hero__logo">
           <img
-            src="/osmprj/img/osmprj-logo-big.png"
+            src="img/osmprj-logo-big.png"
             alt="osmprj logo"
           />
         </div>
         <div className="hero__text">
-          <div className="hero__eyebrow">alpha · 0.1.0</div>
+          <div className="hero__eyebrow">version · 0.2.0 </div>
           <p className="hero__tag">{siteConfig.tagline}</p>
           <div className="hero__btns">
-            <Link className="btn btn--primary" to="/docs/intro">
+            <Link className="btn btn--primary" to="/docs/getting-started">
               Get Started →
             </Link>
             <a
@@ -81,6 +81,26 @@ function FeatureCards() {
     <section className="features">
       <div className="features__inner">
         <div className="features__head">
+          <h2 className="features__title" style={{textAlign: "center"}}>Install</h2>
+        </div>
+        <div className="term features__install_card">
+          <div className="term__bar">
+            <div className="term__dots">
+              <span />
+              <span />
+              <span />
+            </div>
+            <span>~/</span>
+            <span>term</span>
+          </div>
+          <CodeBlock language="bash" title="">
+            curl -fsSL https://osmprj.dev/install.sh | bash
+          </CodeBlock>
+        </div>
+        <div className="features__install_card__extra_info">
+          Want even more installation methods? <Link to="/docs/getting-started"><strong>See here</strong></Link>.
+        </div>
+        <div className="features__head">
           <div className="features__eyebrow">▸ what it does</div>
           <h2 className="features__title">Project management for your OSM data</h2>
         </div>
@@ -99,42 +119,20 @@ function FeatureCards() {
   );
 }
 
-function ShellCodeBlock({ code }: { code: string }) {
-  return (
-      <Highlight code={code.trim()} language="bash" theme={themes.github}>
-        {({ className, style, tokens, getLineProps, getTokenProps }) => (
-            <pre
-                className={className}
-                style={{
-                  ...style,
-                  padding: "1rem",
-                  borderRadius: "0.5rem",
-                  overflowX: "auto",
-                }}
-            >
-          {tokens.map((line, i) => (
-              <div key={i} {...getLineProps({ line })}>
-                {line.map((token, key) => (
-                    <span key={key} {...getTokenProps({ token })} />
-                ))}
-              </div>
-          ))}
-        </pre>
-        )}
-      </Highlight>
-  );
-}
+const terminalDemoText = `# 1. Initialize your project
+osmprj init --db postgres://user@host:5432/db
+Created osmprj.toml
 
-function InstallCard() {
-  let code = `curl -fsSl https://example.com/install.sh | bash`
-  return (
-      <section className="install">
-        <h2>Install</h2>
-        <p>Install</p>
-        <ShellCodeBlock code={code} />
-      </section>
-  )
-}
+# 2. Add sources to your project and choose a theme
+osmprj add bremen --theme shortbread
+...
+osmprj add hamburg --theme pgosm
+...
+
+# 3. Sync your project by downloading importing to PostgreSQL
+osmprj sync
+...
+🌐  Sync complete. 0 sources updated, 2 sources newly imported.`;
 
 function TerminalDemo() {
   return (
@@ -142,7 +140,7 @@ function TerminalDemo() {
       <div className="demo__inner">
         <h2 className="demo__title">See it in action</h2>
         <p className="demo__subtitle">
-          Spin up a fresh database with Germany&apos;s OSM data in four commands.
+          Create a database with various Geofabrik regions in three commands.
         </p>
         <div className="term">
           <div className="term__bar">
@@ -151,10 +149,14 @@ function TerminalDemo() {
               <span />
               <span />
             </div>
-            <span>~/projects/germany-osm</span>
-            <span>bash</span>
+            <span>~/projects/osmprj</span>
+            <span>term</span>
           </div>
-          <pre>{/* prettier-ignore */}<span className="c"># 1. Create an osmprj.toml in the current directory</span>{"\n"}<span className="k">$</span>{" osmprj "}<span className="p">init</span>{" --db "}<span className="s">&quot;postgres://postgres@localhost/osm&quot;</span>{"\n\n"}<span className="c"># 2. Register a Geofabrik region</span>{"\n"}<span className="k">$</span>{" osmprj "}<span className="p">add</span>{" germany --theme "}<span className="s">shortbread</span>{"\n  "}<span className="ok">✓</span>{" schema "}<span className="s">germany</span>{" registered\n\n"}<span className="c"># 3. Check what will be synced</span>{"\n"}<span className="k">$</span>{" osmprj "}<span className="p">status</span>{"\n  database:  postgres://postgres@localhost/osm  "}<span className="ok">✓ connected</span>{"\n\n  source   schema   status\n  ------   ------   ------\n  germany  germany  "}<span className="p">✗</span>{"  — run "}<span className="s">&apos;osmprj sync&apos;</span>{" to import\n\n"}<span className="c"># 4. Download and import</span>{"\n"}<span className="k">$</span>{" osmprj "}<span className="p">sync</span>{"\n  "}<span className="ok">→</span>{" downloading germany-latest.osm.pbf  ["}<span className="ok">██████████</span>{"] 4.2 GB\n  "}</pre>
+          <div className="demo__code_block">
+            <CodeBlock language="bash" title="">
+              {terminalDemoText}
+            </CodeBlock>
+          </div>
         </div>
       </div>
     </section>
@@ -165,9 +167,10 @@ function AsciinemaSection() {
   return (
     <section className="demo" style={{ paddingTop: 40 }}>
       <div className="demo__inner">
-        <h2 className="demo__title" style={{ fontSize: 24, marginBottom: 24 }}>
-          Full walkthrough
-        </h2>
+        <h2 className="demo__title">Full walkthrough</h2>
+        <p className="demo__subtitle">
+          See the entire process of initializing and syncing an osmprj project.
+        </p>
         <div className="demo__player">
           {/*
            * The asciinema player must be rendered client-side only — it accesses

@@ -1,5 +1,10 @@
 """Integration tests for the status command."""
 
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
+
 
 def test_status_fails_without_project(run):
     result = run("status")
@@ -54,11 +59,17 @@ def test_status_bad_db_url_shows_helpful_tip(run, tmp_path):
 def test_add_hints_when_no_db_url(run, project):
     result = run("add", "--path", "/data/r.pbf", "--name", "myregion", cwd=project)
     assert result.returncode == 0
-    assert "hint" in result.stdout or "database_url" in result.stdout
+    assert "hint" in result.stdout or "database" in result.stdout
 
 
-def test_add_warns_on_bad_db_url(run, tmp_path):
+def test_add_fails_on_bad_db_url(run, tmp_path):
     run("init", "--db", "postgres://invalid:5432/nodb", cwd=tmp_path)
     result = run("add", "--path", "/data/r.pbf", "--name", "myregion", cwd=tmp_path)
-    assert result.returncode == 0
-    assert "warning" in result.stderr
+    assert result.returncode != 0
+
+
+def test_add_does_not_write_source_on_bad_db_url(run, tmp_path):
+    run("init", "--db", "postgres://invalid:5432/nodb", cwd=tmp_path)
+    run("add", "--path", "/data/r.pbf", "--name", "myregion", cwd=tmp_path)
+    config = tomllib.loads((tmp_path / "osmprj.toml").read_text())
+    assert "myregion" not in config.get("sources", {})

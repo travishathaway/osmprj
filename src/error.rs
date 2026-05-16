@@ -72,10 +72,25 @@ pub enum OsmprjError {
         code(osmprj::no_database_url),
         help(
             "Add database_url to the [project] section in osmprj.toml:\n\
-             \n  database_url = \"postgres://user:pass@localhost/dbname\""
+             \n  database_url = \"postgres://user:pass@localhost/dbname\"\n\
+             \nOr set the OSMPRJ_DATABASE_URL environment variable."
         )
     )]
     NoDatabaseUrl,
+
+    #[error("Credential command failed: {message}")]
+    #[diagnostic(
+        code(osmprj::credential_command_failed),
+        help("Check that the command in `database_url_command` exits with status 0 and prints a valid database URL to stdout.")
+    )]
+    CredentialCommandFailed { message: String },
+
+    #[error("Credential command produced no output")]
+    #[diagnostic(
+        code(osmprj::credential_command_empty),
+        help("The command in `database_url_command` ran successfully but printed nothing. It must print a valid database URL to stdout.")
+    )]
+    CredentialCommandEmpty,
 
     #[error("Could not connect to database: {message}")]
     #[diagnostic(

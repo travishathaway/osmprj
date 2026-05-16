@@ -767,7 +767,7 @@ div[class*="codeBlockTitle"] {
 /* ─── Feature cards ───────────────────────────────────────────────── */
 
 .features {
-  padding: 80px 24px;
+  padding: 40px 24px;
   background: var(--bg);
   position: relative;
 }
@@ -816,6 +816,30 @@ div[class*="codeBlockTitle"] {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
+}
+
+.features__install_card {
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 1rem;
+}
+
+.features__install_card__extra_info {
+  text-align: center;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 4rem;
+}
+
+.features__install_card > .theme-code-block {
+  margin-bottom: 0;
+}
+
+.features__install_card .theme-code-block pre,
+.demo__code_block .theme-code-block pre {
+  font-size: 18px !important;
 }
 
 @media (max-width: 768px) {
@@ -952,11 +976,23 @@ div[class*="codeBlockTitle"] {
   display: block;
 }
 
+.term__dots span:nth-child(1) {
+  background: #FF5F57;
+}
+
+.term__dots span:nth-child(2) {
+  background: #FEBC2E;
+}
+
+.term__dots span:nth-child(3) {
+  background: #28C840;
+}
+
 .term pre {
   margin: 0;
   padding: 18px 20px;
   font-family: var(--font-code);
-  font-size: 14px;
+  font-size: 20px;
   line-height: 1.6;
   color: #ECEFE0;
   white-space: pre;

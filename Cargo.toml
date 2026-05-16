@@ -19,14 +19,13 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls", "stream"], defau
 dirs = "5"
 indicatif = "0.18.4"
 console = "0.16.3"
-dialoguer = "0.12.0"
 thiserror = "2.0.18"
-anyhow = "1.0.102"
 miette = { version = "7.6.0", features = ["fancy"] }
 sysinfo = "0.33"
-futures = "0.3"
 md-5 = "0.10"
 chrono = { version = "0.4", features = ["serde"] }
 tempfile = "3"
-flate2 = "1"
-tar = "0.4"
+dotenvy = "0.15"
+# I'm not using these dependencies, but I might in the future
+# anyhow = "1.0.102"
+# dialoguer = "0.12.0"

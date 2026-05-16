@@ -6,14 +6,16 @@ pub async fn run(config: &ProjectConfig) -> Result<(), crate::error::OsmprjError
     let sources = &config.sources;
 
     // ── Database connection ───────────────────────────────────────────────────
-    let url = config.project.database_url.as_deref();
+    let url = config.project.effective_database_url()?;
+    let url = url.as_deref();
 
     let client = match url {
         None => {
             println!("  database:  not configured");
             println!(
-                "             Add database_url to [project] in osmprj.toml to enable \
-                 connection checks"
+                "             Add database_url to [project] in osmprj.toml,\n\
+                 \n             set the OSMPRJ_DATABASE_URL environment variable,\n\
+                 \n             or configure database_url_command to enable connection checks"
             );
             print_sources_no_db(config);
             return Ok(());

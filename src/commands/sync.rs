@@ -614,11 +614,11 @@ pub async fn run(
     // Re-run post-processing SQL for each source without downloading or importing.
     // osm2pgsql / osm2pgsql-replication are not required.
     if postprocess_only {
-        let db_url = config
+        let db_url_owned = config
             .project
-            .database_url
-            .as_deref()
+            .effective_database_url()?
             .ok_or(OsmprjError::NoDatabaseUrl)?;
+        let db_url = db_url_owned.as_str();
 
         let theme_registry = ThemeRegistry::build();
 
@@ -705,11 +705,11 @@ pub async fn run(
     let data_dir = config.project.effective_data_dir();
     std::fs::create_dir_all(&data_dir).map_err(OsmprjError::Io)?;
 
-    let db_url = config
+    let db_url_owned = config
         .project
-        .database_url
-        .as_deref()
+        .effective_database_url()?
         .ok_or(OsmprjError::NoDatabaseUrl)?;
+    let db_url = db_url_owned.as_str();
 
     let max_diff_size_mb = config.project.max_diff_size_mb;
 

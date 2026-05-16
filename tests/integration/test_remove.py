@@ -74,17 +74,22 @@ def isolated_project(run_cmd, pg_e2e, tmp_path):
 
 
 @pytest.fixture
-def geofabrik_project(run_cmd, pg_e2e, tmp_path):
-    """Per-test geofabrik sources project with a fresh source + seeded schema."""
+def geofabrik_project(run_cmd_with_server, pg_e2e, tmp_path):
+    """Per-test project with a real Geofabrik source synced via the local test server.
+
+    Uses run_cmd_with_server so all downloads and replication URLs resolve to
+    the local HTTP fixture server rather than the live Geofabrik infrastructure.
+    This prevents flaky failures caused by Geofabrik's rolling diff window.
+    """
     source = "monaco"
 
-    run_cmd("init", "--db", pg_e2e, cwd=tmp_path)
-    run_cmd("add", source, cwd=tmp_path)
-    run_cmd("sync", "--verbose", cwd=tmp_path)
+    run_cmd_with_server("init", "--db", pg_e2e, cwd=tmp_path)
+    run_cmd_with_server("add", source, cwd=tmp_path)
+    run_cmd_with_server("sync", "--verbose", cwd=tmp_path)
 
     yield {"project": tmp_path, "db_url": pg_e2e, "source": source}
 
-    run_cmd("remove", "--force", "monaco", cwd=tmp_path)
+    run_cmd_with_server("remove", "--force", "monaco", cwd=tmp_path, check=False)
 
 
 def test_remove_force_removes_from_toml(isolated_project, run_cmd):
