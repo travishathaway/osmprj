@@ -130,6 +130,14 @@ const config: Config = {
               label: 'Getting Started',
               to: '/docs/getting-started',
             },
+            {
+              label: 'Configuration',
+              to: '/docs/guides/configuration',
+            },
+            {
+              label: 'Themes',
+              to: '/docs/guides/themes',
+            },
           ],
         },
         {
@@ -143,10 +151,18 @@ const config: Config = {
               label: 'Report an Issue',
               href: 'https://github.com/travishathaway/osmprj/issues',
             },
+            {
+              label: 'Sponsor',
+              href: 'https://github.com/sponsors/travishathaway',
+            },
+            {
+              label: 'Blog',
+              to: '/blog',
+            },
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Travis Hathaway. Built with Docusaurus.`,
+      copyright: `© ${new Date().getFullYear()} Travis Hathaway · Built with Docusaurus`,
     },
     prism: {
       theme: osmprjCodeThemeDark,
