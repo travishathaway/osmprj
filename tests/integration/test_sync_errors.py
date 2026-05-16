@@ -26,6 +26,12 @@ class Source(NamedTuple):
     theme: str = "shortbread"
 
 
+@pytest.fixture(autouse=True)
+def clear_osmprj_database_url(monkeypatch):
+    """Prevent inherited env credentials from overriding test DB URLs."""
+    monkeypatch.delenv("OSMPRJ_DATABASE_URL", raising=False)
+
+
 def _init_error_project(run_cmd_with_server, tmp_path, sources, db_url):
     """Initialize a minimal osmprj project with the given DB URL."""
     data_dir = tmp_path / "data"
