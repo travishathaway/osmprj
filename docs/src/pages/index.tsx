@@ -55,7 +55,7 @@ function Hero() {
           />
         </div>
         <div className="hero__text">
-          <div className="hero__eyebrow">version · 0.2.0 </div>
+          <div className="hero__eyebrow">version · 0.3.0 </div>
           <p className="hero__tag">{siteConfig.tagline}</p>
           <div className="hero__btns">
             <Link className="btn btn--primary" to="/docs/getting-started">
