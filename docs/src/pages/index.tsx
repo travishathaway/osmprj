@@ -185,7 +185,7 @@ function AsciinemaSection() {
                   // eslint-disable-next-line @typescript-eslint/no-var-requires
                   const { create } = require('asciinema-player');
                   const player = create(
-                    '/osmprj/osmprj.cast',
+                    'osmprj.cast',
                     containerRef.current,
                     {
                       cols: 80,
