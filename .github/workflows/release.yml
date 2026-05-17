@@ -35,7 +35,7 @@ jobs:
           pixi run --environment pack \
             rattler-build build \
             --channel gis-forge --channel conda-forge \
-            --variant-config variant.${{ matrix.platform }}.yaml \
+            --variant-config recipe/variants.${{ matrix.platform }}.yaml \
             -r recipe/recipe.yaml \
             --output-dir output/
 

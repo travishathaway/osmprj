@@ -8,7 +8,19 @@ sidebar_position: 2
 
 ## Installation
 
-The recommended way to install osmprj is as a conda package.
+The easiest way to install osmprj is with our custom installer:
+
+```bash
+curl -fsSL https://osmprj.dev/install.sh | bash
+```
+
+:::tip
+Want to verify the script first? Check out the **[latest release on GitHub](https://github.com/travishathaway/osmprj/releases/latest)**.
+:::
+
+### Install as a conda package
+
+It's also possible to install osmprj as a conda package from the [gis-forge](https://anaconda.org/gis-forge) channel.
 
 **With `pixi global`** (recommended):
 
@@ -31,34 +43,37 @@ osmprj --version
 
 ## Prerequisites
 
-osmprj requires a running PostgreSQL instance with the [PostGIS](https://postgis.net/) extension installed. It also requires `osm2pgsql` and `osm2pgsql-replication` to be available on your `PATH` — these are installed automatically when you install osmprj via conda.
+osmprj requires a running [PostgreSQL](https://postgresql.org) instance with the [PostGIS](https://postgis.net/) extension installed.
 
 ## Quick Start
 
-The typical workflow is four commands:
+The typical workflow is three commands:
 
 ```bash
 # 1. Create a project file in the current directory
-osmprj init --db "postgres://user:pass@localhost/osm"
+osmprj init --db postgresql://user@localhost:5432/db
+
+# 1a. Optional: If using a password, save to an .env file
+echo "OSMPRJ_DATABASE_URL=postgresql://user:pass@localhost:5432/db" > .env
 
 # 2. Add a Geofabrik region
 osmprj add germany --theme shortbread
 
-# 3. Check what will be synced
-osmprj status
-
-# 4. Download and import the data
+# 3. Download and import the data
 osmprj sync
 ```
+
+:::warning
+**Avoid storing database passwords in `osmprj.toml`.** If this file is committed to version control, it could risk exposing your credentials. See the [Storing Credentials Securely](guides/storing-credentials) guide for more information on best practices.
+:::
 
 ### What happens on first run
 
 When you run `osmprj sync` for the first time:
 
 1. The PBF file is downloaded from Geofabrik with a progress bar (MD5-verified)
-2. osmprj tunes the `osm2pgsql` flags for your hardware (RAM, SSD/HDD, file size)
-3. `osm2pgsql` performs a full import into your database
-4. Replication is initialised so subsequent syncs are incremental
+2. `osm2pgsql` performs a full import into your database
+3. Replication is initialized so subsequent syncs are incremental
 
 ### What happens on subsequent runs
 

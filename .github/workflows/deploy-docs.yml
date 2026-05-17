@@ -50,6 +50,12 @@ jobs:
         run: npm run build
         working-directory: docs
 
+      - name: Download install.sh from latest release
+        run: |
+          gh release download --pattern install.sh --output docs/build/install.sh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 

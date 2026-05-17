@@ -1,3 +1,4 @@
+use crate::url_utils::PgConnParams;
 use std::path::PathBuf;
 use sysinfo::System;
 
@@ -6,7 +7,7 @@ pub struct TunerInput {
     pub pbf_size_gb: f64,
     pub ssd: bool,
     pub concurrent_imports: usize,
-    pub database_url: String,
+    pub pg_conn: PgConnParams,
     pub effective_schema: String,
     pub pbf_path: PathBuf,
     pub style_path: Option<PathBuf>,
@@ -57,7 +58,10 @@ pub fn build_command(input: &TunerInput) -> Vec<String> {
         args.push(format!("--style={}", style_path.display()));
     }
 
-    args.push(format!("--database={}", input.database_url));
+    args.push(format!(
+        "--database={}",
+        input.pg_conn.credential_free_url()
+    ));
     args.push(format!("--schema={}", input.effective_schema));
     args.push(input.pbf_path.display().to_string());
 
@@ -75,7 +79,13 @@ mod tests {
             pbf_size_gb: pbf_gb,
             ssd,
             concurrent_imports: 1,
-            database_url: "postgres://localhost/osm".to_string(),
+            pg_conn: crate::url_utils::PgConnParams {
+                host: "localhost".to_string(),
+                port: 5432,
+                database: "osm".to_string(),
+                user: "postgres".to_string(),
+                password: None,
+            },
             effective_schema: "albania".to_string(),
             pbf_path: PathBuf::from("/data/albania.osm.pbf"),
             style_path: Some(PathBuf::from("/tmp/style.lua")),
@@ -151,9 +161,9 @@ mod tests {
     #[test]
     fn concurrent_imports_halves_cache_budget() {
         // With concurrent_imports=1, the full RAM budget is used.
-        let cache_single = get_cache_mb(0.5, 16.0, 1);
+        let _cache_single = get_cache_mb(0.5, 16.0, 1);
         // With concurrent_imports=2, each import gets half the RAM.
-        let cache_double = get_cache_mb(0.5, 16.0, 2);
+        let _cache_double = get_cache_mb(0.5, 16.0, 2);
         // The double-concurrent cache should be roughly half the single cache
         // (both are slim_cache-limited here, so they should be equal — but let's
         // also verify the cap case, which differs).
