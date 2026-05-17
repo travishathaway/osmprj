@@ -2,7 +2,7 @@
 name = "osmprj"
 version = "0.3.0"
 description = "OpenStreetMap and PostgreSQL project management tool"
-channels = ["gis-forge", "https://prefix.dev/thath", "conda-forge"]
+channels = ["gis-forge", "conda-forge"]
 platforms = ["linux-64", "osx-arm64", "linux-aarch64"] #  "osx-64", "win-64"]
 
 [environments]
@@ -39,7 +39,7 @@ pytest-sugar = ">=1.1.1,<2"
 mypy = ">=1.19.1,<2"
 pre-commit = ">=4.5.1,<5"
 pylint = ">=4.0.4,<5"
-pg-helper = "*"
+pg-helper = ">=0.2.0"
 postgresql = ">=18.0"
 postgis = ">=3.6.3,<4"
 prek = ">=0.3.11,<0.4"
