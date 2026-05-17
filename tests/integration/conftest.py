@@ -19,6 +19,7 @@ from pathlib import Path
 
 import psycopg
 import pytest
+from pg_helper.postgres import PgDataManager, Platform, PostgresManager
 
 # Make _platform.py importable from test modules in this directory.
 sys.path.insert(0, str(Path(__file__).parent))
@@ -27,6 +28,8 @@ from _platform import platform_cache_env, platform_cache_subdir
 
 BINARY = Path(__file__).parents[2] / "target" / "release" / "osmprj"
 DATA_DIR = Path(__file__).parents[1] / "data"
+PG_TEST_PORT = 65112
+PG_TEST_PASSWORD = "osmprj_test"  # noqa: S105
 REPO_ROOT = Path(__file__).parents[2]
 TESTS_THEMES_DIR = Path(__file__).parents[1] / "themes"
 PBF_FIXTURE_DIR = Path(
@@ -67,32 +70,62 @@ def run_cmd(binary):
 
 
 @pytest.fixture(scope="session")
-def pg_e2e(tmpdir_factory):
-    """Ephemeral PostgreSQL cluster on port 65112, managed by pg-helper."""
-    tmp_data_dir = tmpdir_factory.mktemp("pg_e2e") / "pgdata"
+def pg_e2e(tmp_path_factory):
+    """Ephemeral PostgreSQL cluster on port 65112 with scram-sha-256 auth, managed by pg-helper."""
+    tmp_data_dir = tmp_path_factory.mktemp("pg_e2e") / "pgdata"
+    mp = pytest.MonkeyPatch()
 
-    # Start server
+    # Create .pgpass file (mode 0600 required by libpq)
+    pgpass_path = tmp_path_factory.mktemp("pgpass") / ".pgpass"
+    pgpass_path.write_text(f"localhost:{PG_TEST_PORT}:*:postgres:{PG_TEST_PASSWORD}\n")
+    pgpass_path.chmod(0o600)
+
+    # Expose .pgpass to the entire test session (inherited by all subprocesses)
+    mp.setenv("PGPASSFILE", str(pgpass_path))
+
+    # Start with trust auth so we can set the password via SQL
     subprocess.run(
-        ["pg-helper", "--data-dir", tmp_data_dir, "--port", "65112", "start"], check=True
+        ["pg-helper", "--data-dir", tmp_data_dir, "--port", str(PG_TEST_PORT), "start"], check=True
     )
 
-    conn_str = "postgresql://postgres@localhost:65112/postgres"
+    conn_str = f"postgresql://postgres:{PG_TEST_PASSWORD}@localhost:{PG_TEST_PORT}/postgres"
 
-    # If an error occurs here, will still need to destroy the database afterward.
     try:
+        trust_conn_str = f"postgresql://postgres@localhost:{PG_TEST_PORT}/postgres"
+        with psycopg.connect(trust_conn_str, autocommit=True) as conn:
+            conn.execute(f"ALTER USER postgres PASSWORD '{PG_TEST_PASSWORD}'")
+            conn.execute("CREATE EXTENSION IF NOT EXISTS hstore")
+
+        # Switch pg_hba.conf from trust to scram-sha-256 and reload
+        data_mgr = PgDataManager(tmp_data_dir)
+        pg_mgr = PostgresManager(data_mgr, PG_TEST_PORT)
+        pg_mgr.configure_password_auth()
+
+        pg_ctl = Platform.find_pg_command("pg_ctl")
+        subprocess.run([pg_ctl, "reload", "-D", str(tmp_data_dir)], check=True)
+
+        # Verify password auth works before yielding
         with psycopg.connect(conn_str) as conn:
-            conn.execute("CREATE EXTENSION IF NOT EXISTS hstore ")
+            conn.execute("SELECT 1")
 
         yield conn_str
 
     finally:
-        # Stop
+        mp.undo()
         subprocess.run(
-            ["pg-helper", "--data-dir", tmp_data_dir, "--port", "65112", "stop"], check=True
+            ["pg-helper", "--data-dir", tmp_data_dir, "--port", str(PG_TEST_PORT), "stop"],
+            check=True,
         )
-        # Destroy
         subprocess.run(
-            ["pg-helper", "--data-dir", tmp_data_dir, "--port", "65112", "destroy", "--force"],
+            [
+                "pg-helper",
+                "--data-dir",
+                tmp_data_dir,
+                "--port",
+                str(PG_TEST_PORT),
+                "destroy",
+                "--force",
+            ],
             check=True,
         )
 
