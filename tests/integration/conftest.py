@@ -20,6 +20,7 @@ from pathlib import Path
 import psycopg
 import pytest
 from pg_helper.postgres import PgDataManager, Platform, PostgresManager
+from xprocess import ProcessStarter
 
 # Make _platform.py importable from test modules in this directory.
 sys.path.insert(0, str(Path(__file__).parent))
@@ -131,7 +132,23 @@ def pg_e2e(tmp_path_factory):
 
 
 @pytest.fixture(scope="session")
-def geofabrik_cache_dir(tmp_path_factory):
+def geofabrik_server(xprocess):
+    """Mock Geofabrik server."""
+    port = "58585"
+
+    class Server(ProcessStarter):
+        pattern = f"Running on http://127.0.0.1:{port}"
+        args = ("gms", "serve", "--port", port)
+
+    _ = xprocess.ensure("server", Server)
+
+    yield "http://localhost:58585"
+
+    xprocess.getinfo("server").terminate()
+
+
+@pytest.fixture(scope="session")
+def geofabrik_cache_dir(geofabrik_server: str, tmp_path_factory: pytest.TempPathFactory) -> Path:
     """Session-scoped fake cache root pre-populated with the test Geofabrik index.
 
     The internal layout mirrors what the ``dirs`` crate resolves on each platform:
@@ -146,6 +163,11 @@ def geofabrik_cache_dir(tmp_path_factory):
     osmprj_dir = cache_subdir / "osmprj"
     osmprj_dir.mkdir(parents=True)
     shutil.copy(DATA_DIR / "geofabrik-index-v1.json", osmprj_dir / "geofabrik-index-v1.json")
+
+    index = Path(osmprj_dir / "geofabrik-index-v1.json")
+    new_text = index.read_text().replace("https://download.geofabrik.de", geofabrik_server)
+    index.write_text(new_text)
+
     return root
 
 
