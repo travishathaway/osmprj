@@ -355,7 +355,7 @@ def download_server():
     """Session-scoped local HTTP server serving PBF fixtures with error injection support."""
     if os.environ.get("GEOFABRIK_MOCK_SERVER_ROOT_DIR") is None:
         error_msg = "Please install geofabrik-mock-server to run tests."
-        raise OSError(error_msg)
+        pytest.fail(error_msg)
 
     pbf_fixture_cache = Path(os.environ["GEOFABRIK_MOCK_SERVER_ROOT_DIR"])
     server = TestOsmServer(pbf_fixture_cache)
