@@ -142,7 +142,7 @@ def test_first_fails_second_succeeds(
     error but the second succeeds both download and import.
     """
     _init_error_project(
-        run_cmd_with_server, tmp_path, [Source(name="monaco"), Source(name="liechtenstein")], pg_e2e
+        run_cmd_with_server, tmp_path, [Source(name="monaco"), Source(name="bremen")], pg_e2e
     )
     download_server.inject_error(_MONACO_PBF_PATH, status=500)
 
@@ -153,7 +153,7 @@ def test_first_fails_second_succeeds(
     assert result.returncode != 0
 
     # Clean up
-    run_cmd_with_server("remove", "--force", "liechtenstein", cwd=tmp_path)
+    run_cmd_with_server("remove", "--force", "bremen", cwd=tmp_path)
     run_cmd_with_server("remove", "--force", "monaco", cwd=tmp_path)
 
 
@@ -162,7 +162,7 @@ def test_post_process_sql_fails(run_cmd_with_server, tmp_path, pg_e2e, reset_ser
     _init_error_project(
         run_cmd_with_server,
         tmp_path,
-        [Source(name="monaco"), Source(name="liechtenstein", theme="bad-postprocess")],
+        [Source(name="monaco"), Source(name="bremen", theme="bad-postprocess")],
         pg_e2e,
     )
 
@@ -171,8 +171,8 @@ def test_post_process_sql_fails(run_cmd_with_server, tmp_path, pg_e2e, reset_ser
     # We just get a warning when the post-processing SQL fails so the process returns 0
     assert result.returncode == 0
     combined = (result.stdout + result.stderr).lower()
-    assert "post-processing sql failed for source 'liechtenstein'" in combined
+    assert "post-processing sql failed for source 'bremen'" in combined
 
     # Clean up
-    run_cmd_with_server("remove", "--force", "liechtenstein", cwd=tmp_path)
+    run_cmd_with_server("remove", "--force", "bremen", cwd=tmp_path)
     run_cmd_with_server("remove", "--force", "monaco", cwd=tmp_path)
