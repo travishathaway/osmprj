@@ -103,7 +103,6 @@ def test_second_sync_runs_update(source_state):
     )
 
 
-@pytest.mark.xfail(reason="depends on replication server having newer data than the PBF snapshot")
 def test_replication_timestamp_advances(source_state):
     """Ensure that the replication timestamp updates after each sync run."""
     ts_before = source_state["ts_before"]

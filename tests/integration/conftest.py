@@ -5,7 +5,6 @@ These are mostly used for making subshell calls and setting up and
 tearing down databases.
 """
 
-import hashlib
 import json
 import os
 import platform
@@ -13,7 +12,6 @@ import shutil
 import subprocess
 import sys
 import threading
-import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -49,7 +47,7 @@ def binary():
 
 
 @pytest.fixture(scope="session")
-def run_cmd(binary):
+def run_cmd(binary, download_server):
     """Session-scoped helper that runs the osmprj binary and returns CompletedProcess.
 
     Pass ``check=False`` to suppress the assertion on returncode (e.g. when you
@@ -131,7 +129,9 @@ def pg_e2e(tmp_path_factory):
 
 
 @pytest.fixture(scope="session")
-def geofabrik_cache_dir(tmp_path_factory):
+def geofabrik_cache_dir(
+    download_server: "TestOsmServer", tmp_path_factory: pytest.TempPathFactory
+) -> Path:
     """Session-scoped fake cache root pre-populated with the test Geofabrik index.
 
     The internal layout mirrors what the ``dirs`` crate resolves on each platform:
@@ -146,6 +146,11 @@ def geofabrik_cache_dir(tmp_path_factory):
     osmprj_dir = cache_subdir / "osmprj"
     osmprj_dir.mkdir(parents=True)
     shutil.copy(DATA_DIR / "geofabrik-index-v1.json", osmprj_dir / "geofabrik-index-v1.json")
+
+    index = Path(osmprj_dir / "geofabrik-index-v1.json")
+    new_text = index.read_text().replace(_GEOFABRIK_BASE, download_server.base_url)
+    index.write_text(new_text)
+
     return root
 
 
@@ -181,37 +186,9 @@ def project(run, tmp_path):
 # ─── PBF fixture cache ────────────────────────────────────────────────────────
 
 _MONACO_REGION = "europe/monaco-latest"
-_LIECHTENSTEIN_REGION = "europe/liechtenstein-latest"
+_BREMEN_REGION = "europe/germany/bremen-latest"
 _GEOFABRIK_BASE = "https://download.geofabrik.de"
-REGIONS = [_MONACO_REGION, _LIECHTENSTEIN_REGION]
-
-
-@pytest.fixture(scope="session")
-def pbf_fixture_cache():
-    """Download the `REGIONS` pbf files once and cache it locally.
-
-    Default location: <repo_root>/tests/fixtures/pbf/ (gitignored).
-    Override with OSMPRJ_TEST_FIXTURE_DIR env var.
-
-    Also computes and saves a .md5 sidecar in Geofabrik format.
-    Returns the cache root Path.
-    """
-    for region in REGIONS:
-        pbf_path = PBF_FIXTURE_DIR / f"{region}.osm.pbf"
-        md5_path = PBF_FIXTURE_DIR / f"{region}.osm.pbf.md5"
-
-        pbf_path.parent.mkdir(parents=True, exist_ok=True)
-
-        if not pbf_path.exists():
-            url = f"{_GEOFABRIK_BASE}/{region}.osm.pbf"
-            urllib.request.urlretrieve(url, pbf_path)  # noqa: S310
-
-        if not md5_path.exists():
-            digest = hashlib.md5(pbf_path.read_bytes(), usedforsecurity=False).hexdigest()
-            md5_path.write_text(f"{digest}  {pbf_path.name}\n")
-
-    return PBF_FIXTURE_DIR
-
+REGIONS = [_MONACO_REGION, _BREMEN_REGION]
 
 # ─── TestOsmServer ────────────────────────────────────────────────────────────
 
@@ -374,8 +351,13 @@ class TestOsmServer:
 
 
 @pytest.fixture(scope="session")
-def download_server(pbf_fixture_cache):
+def download_server():
     """Session-scoped local HTTP server serving PBF fixtures with error injection support."""
+    if os.environ.get("GEOFABRIK_MOCK_SERVER_ROOT_DIR") is None:
+        error_msg = "Please install geofabrik-mock-server to run tests."
+        pytest.fail(error_msg)
+
+    pbf_fixture_cache = Path(os.environ["GEOFABRIK_MOCK_SERVER_ROOT_DIR"])
     server = TestOsmServer(pbf_fixture_cache)
     server.start()
     yield server
