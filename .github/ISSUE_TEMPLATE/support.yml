@@ -1,0 +1,58 @@
+name: 🙋 Support Request
+description: Ask a question or get help using the project
+labels: ["question", "support"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Need help? We're happy to assist. Please check the documentation first, then fill in the details below.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pre-flight checklist
+      options:
+        - label: I have read the documentation and could not find an answer
+          required: true
+        - label: I have searched existing issues and discussions for a solution
+          required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question or problem
+      description: What are you trying to do, or what do you need help understanding?
+      placeholder: I'm trying to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: What I've tried
+      description: Describe what you have already attempted or looked at.
+    validations:
+      required: true
+
+  - type: textarea
+    id: code
+    attributes:
+      label: Minimal reproducible example
+      description: If applicable, share a small code snippet or configuration that illustrates your situation.
+      render: shell
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Please provide relevant environment details.
+      placeholder: |
+        - OS: [e.g. Ubuntu 24.04, macOS 15, Windows 11]
+        - Version: [e.g. v1.2.3]
+        - Runtime / language version: [e.g. Node 22, Python 3.12]
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Anything else that might help us answer your question.

@@ -1,0 +1,41 @@
+name: 💬 Other
+description: Anything that doesn't fit the other categories
+labels: ["triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If your issue doesn't fit the other templates, use this one. Please try to be as descriptive as possible — it helps us triage faster.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pre-flight checklist
+      options:
+        - label: I have checked that none of the other issue templates fit my case
+          required: true
+        - label: I have searched existing issues to avoid duplicates
+          required: true
+
+  - type: input
+    id: title_hint
+    attributes:
+      label: Topic / category
+      description: Give us a short label for what kind of issue this is (e.g. "Documentation gap", "Performance question", etc.).
+      placeholder: e.g. Documentation gap
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe your issue or concern in as much detail as possible.
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Any links, screenshots, references, or other context that might be helpful.
