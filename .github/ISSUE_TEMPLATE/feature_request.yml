@@ -1,0 +1,57 @@
+name: 🚀 Feature Request
+description: Suggest a new feature or enhancement
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement! Please fill in the details below so we can evaluate the request.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pre-flight checklist
+      options:
+        - label: I have searched existing issues and this feature has not been requested before
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What problem does this feature solve? Is your request related to a frustration or limitation you've encountered?
+      placeholder: I find it frustrating when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe the feature or enhancement you'd like to see. Be as specific as possible.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Have you considered any alternative approaches or workarounds? Why were they insufficient?
+
+  - type: dropdown
+    id: importance
+    attributes:
+      label: Importance
+      description: How important is this feature to you?
+      options:
+        - Nice to have
+        - Important
+        - Critical / blocking
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Any other context, mockups, references to similar features in other projects, or links that might help.
