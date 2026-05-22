@@ -1,0 +1,72 @@
+name: 🔧 Maintenance
+description: Releases, CI/CD, dependency updates, refactoring, or other project upkeep
+labels: ["maintenance"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for housekeeping tasks: releases, CI/CD changes, dependency updates, refactoring, or infrastructure work.
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Maintenance type
+      options:
+        - Release
+        - Dependency update
+        - CI/CD
+        - Refactoring / technical debt
+        - Documentation
+        - Repository / project hygiene
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the maintenance task. What needs to be done and why?
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this maintenance work necessary or beneficial?
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and affected areas
+      description: What parts of the codebase, pipeline, or project will be affected?
+
+  - type: textarea
+    id: checklist
+    attributes:
+      label: Task checklist
+      description: Optional list of sub-tasks for tracking progress.
+      placeholder: |
+        - [ ] Step one
+        - [ ] Step two
+        - [ ] Step three
+
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: Urgency
+      options:
+        - Low — schedule when convenient
+        - Medium — should be done this cycle
+        - High — blocking or time-sensitive
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Links to related issues, PRs, external references, or any other relevant information.
