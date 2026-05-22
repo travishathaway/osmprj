@@ -9,7 +9,7 @@ I'm excited to announce the alpha release of a new tool for managing [OpenStreet
 (OSM) data with [PostgreSQL](https://postgresql.org): osmprj. This tool aims to reduce the hassle of
 working with OSM data in PostgreSQL by providing workflows similar to modern package managers like
 [uv](https://docs.astral.sh/uv/), [Cargo](https://crates.io), [npm](https://npmjs.com) or
-[pixi](https://pixi.prefix.dev/latest) It's built on top of the tried and true [osm2pgsql](https://osm2pgsql.org)
+[pixi](https://pixi.prefix.dev/latest). It's built on top of the tried and true [osm2pgsql](https://osm2pgsql.org)
 utility and utilizes the brand  new [osm2pgsql-themepark](https://osm2pgsql.org/themepark)
 framework that offers an endless posibility of schema layouts for your OSM data.
 
