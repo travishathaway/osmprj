@@ -155,3 +155,27 @@ osmprj is developed and maintained as free, open-source software. If you find it
 **[github.com/sponsors/travishathaway](https://github.com/sponsors/travishathaway)**
 
 Sponsorships help fund time for new features, bug fixes, documentation, and keeping the project maintained. Every contribution, large or small, is appreciated.
+
+---
+
+## Use of Generative AI
+
+This project uses generative AI tools (Claude Sonnet 4.6 by Anthropic and GitHub Copilot)
+to assist with development. All AI-assisted outputs are carefully reviewed and edited by
+project maintainers before being incorporated into the project.
+
+AI tools are used to assist with the following tasks:
+
+- **Documentation**: drafting and improving written content
+- **Code**: generating boilerplate and suggesting implementations
+- **Tests**: generating test cases and test scaffolding
+
+For planning new features, [openspec](https://openspec.dev) is used. All openspec change plans
+and resulting specifications are saved directly to this repository. For new contributors, the
+use of openspec is not required, but it is highly encouraged to help provide an auditable trail
+of significantly sized feature additions.
+
+When submitting your own pull requests to this project, you must disclose all use of generative
+AI tools by clearly documenting which models were used in the pull request. All contributors
+will be held personally responsible for the content of submitted pull requests regardless
+of whether it was AI generated or not.
