@@ -18,6 +18,8 @@ jobs:
             runner: ubuntu-24.04-arm
           - platform: osx-arm64
             runner: macos-14
+          - platform: win-64
+            runner: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -55,12 +57,18 @@ jobs:
             pixi.toml
 
       - name: Rename installer
-        run: mv environment.sh osmprj-${{ matrix.platform }}-installer.sh
+        shell: bash
+        run: |
+          if [ "${{ matrix.platform }}" = "win-64" ]; then
+            mv environment.ps1 osmprj-${{ matrix.platform }}-installer.ps1
+          else
+            mv environment.sh osmprj-${{ matrix.platform }}-installer.sh
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
           name: installer-${{ matrix.platform }}
-          path: osmprj-*-installer.sh
+          path: osmprj-*-installer.*
 
   publish-release:
     name: Publish release assets
@@ -81,8 +89,8 @@ jobs:
 
       - name: Generate checksums
         run: |
-          (cd installers && sha256sum osmprj-*.sh) > checksums.sha256
-          (cd scripts && sha256sum install.sh) >> checksums.sha256
+          (cd installers && sha256sum osmprj-*.sh osmprj-*.ps1) > checksums.sha256
+          (cd scripts && sha256sum install.sh install.ps1) >> checksums.sha256
 
       - uses: sigstore/cosign-installer@v3
 
@@ -99,7 +107,9 @@ jobs:
             installers/osmprj-linux-64-installer.sh \
             installers/osmprj-linux-aarch64-installer.sh \
             installers/osmprj-osx-arm64-installer.sh \
+            installers/osmprj-win-64-installer.ps1 \
             scripts/install.sh \
+            scripts/install.ps1 \
             checksums.sha256 \
             checksums.sha256.bundle
         env:

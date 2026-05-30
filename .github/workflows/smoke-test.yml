@@ -17,6 +17,8 @@ jobs:
             runner: ubuntu-latest
           - platform: osx-arm64
             runner: macos-14
+          - platform: win-64
+            runner: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -27,6 +29,7 @@ jobs:
           cache: true
 
       - name: Build conda package
+        shell: bash
         run: |
           pixi run --environment pack \
             rattler-build build \
@@ -36,6 +39,7 @@ jobs:
             --output-dir output/
 
       - name: Pack environment
+        shell: bash
         run: |
           shopt -s nullglob
           artifacts=(output/${{ matrix.platform }}/*.conda)
@@ -51,10 +55,29 @@ jobs:
             pixi.toml
 
       - name: Rename installer
-        run: mv environment.sh osmprj-${{ matrix.platform }}-installer.sh
+        shell: bash
+        run: |
+          if [ "${{ matrix.platform }}" = "win-64" ]; then
+            mv environment.ps1 osmprj-${{ matrix.platform }}-installer.ps1
+          else
+            mv environment.sh osmprj-${{ matrix.platform }}-installer.sh
+          fi
 
-      - name: Run installer
+      - name: Run installer (Unix)
+        if: matrix.platform != 'win-64'
         run: ./osmprj-${{ matrix.platform }}-installer.sh --output-directory /tmp/osmprj-test
 
-      - name: Assert binary is functional
+      - name: Run installer (Windows)
+        if: matrix.platform == 'win-64'
+        shell: pwsh
+        run: .\osmprj-win-64-installer.ps1 --output-directory "$Env:RUNNER_TEMP\osmprj-test"
+
+      - name: Assert binary is functional (Unix)
+        if: matrix.platform != 'win-64'
         run: /tmp/osmprj-test/env/bin/osmprj --version
+
+      - name: Assert binary is functional (Windows)
+        if: matrix.platform == 'win-64'
+        shell: pwsh
+        run: |
+          & "$Env:RUNNER_TEMP\osmprj-test\env\bin\osmprj.exe" --version
